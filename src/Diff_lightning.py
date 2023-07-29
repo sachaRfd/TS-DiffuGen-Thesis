@@ -21,7 +21,7 @@ from Dataset_TX1.dataset_TX1_class import TX1_dataset
 from pytorch_lightning.callbacks import LearningRateMonitor
 
 
-# Create Pytorch Lightning class for the diffusion model:
+# Pytorch Lightning class for the diffusion model:
 class LitDiffusionModel(pl.LightningModule):
     def __init__(self, 
                  dataset_to_use,
@@ -86,7 +86,7 @@ class LitDiffusionModel(pl.LightningModule):
 
 
         if self.dataset_to_use == "W93":        
-            self.dataset = QM90_TS(directory="Dataset_W93/data/Clean_Geometries", remove_hydrogens=self.remove_hydrogens, include_context=include_context)
+            self.dataset = QM90_TS(directory="data/Dataset_W93/data/Clean_Geometries", remove_hydrogens=self.remove_hydrogens, include_context=include_context)
         
             # # Split into 8:1:1 ratio:
             self.train_dataset, test_dataset = train_test_split(self.dataset, test_size=0.2, random_state=42)

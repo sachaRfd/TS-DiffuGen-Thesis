@@ -251,14 +251,14 @@ def calc_cov_mat(rmse_matrix, cov_threshold=0.1):
 if __name__ == "__main__":
     print("Running Evaluation Script\n")
 
-    example_path = "src/Diffusion/Clean_lightning/TX1_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_False_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_2000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Samples"
+    sample_path = "src/Diffusion/Clean_lightning/TX1_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_False_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_2000_timesteps_64_batch_size_3000_epochs_False_Rem_Hydrogens/Samples"
 
-    true_mols, gen_mols = create_lists(example_path)
+    true_mols, gen_mols = create_lists(sample_path)
     
     # Get the number of iterations for the best alignmenet algorithm: 
     max_iter = 100_000  #  gets quite slow very quickly
 
     table = create_rmse_table(true_mols=true_mols, gen_mols=gen_mols, max_iters=max_iter)
     print(table)
-    calc_cov_mat(table, cov_threshold=0.1)
+    calc_cov_mat(table, cov_threshold=0.2)
      

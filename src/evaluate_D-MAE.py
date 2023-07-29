@@ -88,7 +88,11 @@ def import_xyz_file(molecule_path):
 
     # Create the tuples: 
     molecule = []
-    for atom in lines:
+
+    # For NEW XYZ format: 
+    # for atom in lines[2:]:  # Skip the first 2 lines (as it is just Number of atoms and empty line)
+
+    for atom in lines[0:]:  # Skip the first 2 lines (as it is just Number of atoms and empty line)
         # Make sure to check we are not using the hydrogens in our calculations
         if atom[0] == "H":
             # print(atom[0]) 
@@ -323,15 +327,15 @@ def calc_cov_mat(dmae_matrix, cov_threshold=0.1):
 if __name__ == "__main__":
     print("Running Evaluation Script\n")
 
-    example_path = "src/Diffusion/Clean_lightning/BEST_MODEL_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_2000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Samples_100"
+    sample_path = "src/Diffusion/Clean_lightning/BEST_MODEL_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_2000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Samples_2"
 
     # Generates the true and generated molcules: 
-    true_molecules, generated_molecules = create_lists(example_path)
+    true_molecules, generated_molecules = create_lists(sample_path)
 
     # Create table of D-MAE: 
     table = create_dmae_table(true_mols=true_molecules, gen_mols=generated_molecules)
     print(table)
 
     # Get the COVerage and MATching scores: 
-    calc_cov_mat(table, cov_threshold=0.1)
+    calc_cov_mat(table.iloc[:, :1], cov_threshold=0.2)
      

@@ -480,172 +480,172 @@ if __name__ == "__main__":
     model_name = f"{n_layers}_layers_{hidden_features}_hiddenfeatures_{lr}_lr_{noise_schedule}_{timesteps}_timesteps_{batch_size}_batch_size_{epochs}_epochs_{remove_hydrogens}_Rem_Hydrogens"
     folder_name = "Diffusion/Clean/" + model_name + "/"
     
-    # Setup WandB:
-    wandb.init(project='Diffusion_context_test', name=model_name)
-    wandb.config.name = model_name
-    wandb.config.batch_size = batch_size
-    wandb.config.epochs = epochs
-    wandb.config.lr = lr
-    wandb.config.hidden_node_features = hidden_features
-    wandb.config.number_of_layers= n_layers
+    # # Setup WandB:
+    # wandb.init(project='Diffusion_context_test', name=model_name)
+    # wandb.config.name = model_name
+    # wandb.config.batch_size = batch_size
+    # wandb.config.epochs = epochs
+    # wandb.config.lr = lr
+    # wandb.config.hidden_node_features = hidden_features
+    # wandb.config.number_of_layers= n_layers
 
 
 
-    denoising_model = model_dynamics_with_mask.EGNN_dynamics_QM9(in_node_nf=in_node_nf, context_node_nf=context_nf, hidden_nf=hidden_features, out_node=out_node, n_dims=n_dims, sin_embedding=True, n_layers=n_layers, device=device)  # Something is going wrong with the embedding of H
+    # denoising_model = model_dynamics_with_mask.EGNN_dynamics_QM9(in_node_nf=in_node_nf, context_node_nf=context_nf, hidden_nf=hidden_features, out_node=out_node, n_dims=n_dims, sin_embedding=True, n_layers=n_layers, device=device)  # Something is going wrong with the embedding of H
 
 
-    dataset = QM90_TS(directory="Dataset_W93/data/Clean_Geometries/", remove_hydrogens=remove_hydrogens, include_context=include_context)
+    # dataset = QM90_TS(directory="Dataset_W93/data/Clean_Geometries/", remove_hydrogens=remove_hydrogens, include_context=include_context)
 
-    # Calculate the sizes for each split
-    train_dataset, test_dataset = train_test_split(dataset, test_size=0.3, random_state=42)
+    # # Calculate the sizes for each split
+    # train_dataset, test_dataset = train_test_split(dataset, test_size=0.3, random_state=42)
 
-    # Splitting the train dataset into train and validation sets
-    train_dataset, val_dataset = train_test_split(train_dataset, test_size=0.1, random_state=42)
+    # # Splitting the train dataset into train and validation sets
+    # train_dataset, val_dataset = train_test_split(train_dataset, test_size=0.1, random_state=42)
 
-    # Create DataLoaders
-    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size)  # Not shuffled so that we can visualise the same samples 
-
-
-
-    # Setup the diffusion model: 
-    diffusion_model = DiffusionModel(dynamics= denoising_model, in_node_nf=in_node_nf, n_dims=n_dims, timesteps=timesteps, device=device, noise_schedule=noise_schedule)
+    # # Create DataLoaders
+    # train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
+    # val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True)
+    # test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size)  # Not shuffled so that we can visualise the same samples 
 
 
-    # Now let's try training the function and see if it works for now
-    optimiser = torch.optim.Adam(diffusion_model.parameters(), lr = lr)
 
-    diffusion_model.to(device)
-    for epoch in range(epochs):
-            total_train_loss = 0.
-            total_val_loss = 0.
-
-            # Setup training mode: 
-            diffusion_model.train()
-            for batch, node_mask in tqdm(train_loader):
+    # # Setup the diffusion model: 
+    # diffusion_model = DiffusionModel(dynamics= denoising_model, in_node_nf=in_node_nf, n_dims=n_dims, timesteps=timesteps, device=device, noise_schedule=noise_schedule)
 
 
-                # Check that the values are centred: 
-                diffusion_utils.assert_mean_zero_with_mask(batch[:, :, -3:], node_mask.unsqueeze(2).expand(batch[:, :, -3:].size()))
+    # # Now let's try training the function and see if it works for now
+    # optimiser = torch.optim.Adam(diffusion_model.parameters(), lr = lr)
+
+    # diffusion_model.to(device)
+    # for epoch in range(epochs):
+    #         total_train_loss = 0.
+    #         total_val_loss = 0.
+
+    #         # Setup training mode: 
+    #         diffusion_model.train()
+    #         for batch, node_mask in tqdm(train_loader):
+
+
+    #             # Check that the values are centred: 
+    #             diffusion_utils.assert_mean_zero_with_mask(batch[:, :, -3:], node_mask.unsqueeze(2).expand(batch[:, :, -3:].size()))
                 
-                optimiser.zero_grad()
+    #             optimiser.zero_grad()
 
 
-                h = batch[:, :, :-3].to(device)
-                x = batch[:, :, -3:].to(device)
+    #             h = batch[:, :, :-3].to(device)
+    #             x = batch[:, :, -3:].to(device)
 
-                # setup the edge_mask: 
-                edge_mask = node_mask.unsqueeze(1)  * node_mask.unsqueeze(2)
+    #             # setup the edge_mask: 
+    #             edge_mask = node_mask.unsqueeze(1)  * node_mask.unsqueeze(2)
 
-                # Create mask for diagonal, as atoms cannot connect to themselves: 
-                diag_mask = ~torch.eye(edge_mask.size(-1), device=edge_mask.device).unsqueeze(0).bool()
+    #             # Create mask for diagonal, as atoms cannot connect to themselves: 
+    #             diag_mask = ~torch.eye(edge_mask.size(-1), device=edge_mask.device).unsqueeze(0).bool()
 
-                # Expand to batch size: 
-                diag_mask = diag_mask.expand(edge_mask.size())
+    #             # Expand to batch size: 
+    #             diag_mask = diag_mask.expand(edge_mask.size())
 
-                # Multiply the edge mask by the diagonal mask to not have connections with itself: 
-                edge_mask *= diag_mask       
+    #             # Multiply the edge mask by the diagonal mask to not have connections with itself: 
+    #             edge_mask *= diag_mask       
 
 
 
-                # Calculate the loss: 
-                nll = diffusion_model(x.to(device), h.to(device), node_mask.to(device), edge_mask.to(device))
+    #             # Calculate the loss: 
+    #             nll = diffusion_model(x.to(device), h.to(device), node_mask.to(device), edge_mask.to(device))
 
-                loss = nll.to(device)
+    #             loss = nll.to(device)
 
-                loss.backward()
-                optimiser.step()
+    #             loss.backward()
+    #             optimiser.step()
 
-                total_train_loss += nll
+    #             total_train_loss += nll
             
-            total_train_loss /= len(train_loader)
-            print(f"At epoch {epoch} \t Train Loss = {total_train_loss}")
-            wandb.log({"Train_loss": total_train_loss})
+    #         total_train_loss /= len(train_loader)
+    #         print(f"At epoch {epoch} \t Train Loss = {total_train_loss}")
+    #         wandb.log({"Train_loss": total_train_loss})
 
-            # Setup Validation part: 
-            diffusion_model.eval()
-            with torch.no_grad():
-                for batch, node_mask in tqdm(val_loader):
-
-
-                    h = batch[:, :, :-3].to(device)
-                    x = batch[:, :, -3:].to(device)
+    #         # Setup Validation part: 
+    #         diffusion_model.eval()
+    #         with torch.no_grad():
+    #             for batch, node_mask in tqdm(val_loader):
 
 
-                    # setup the edge_mask: 
-                    edge_mask = node_mask.unsqueeze(1)  * node_mask.unsqueeze(2)
-
-                    # Create mask for diagonal, as atoms cannot connect to themselves: 
-                    diag_mask = ~torch.eye(edge_mask.size(-1), device=edge_mask.device).unsqueeze(0).bool()
-
-                    # Expand to batch size: 
-                    diag_mask = diag_mask.expand(edge_mask.size())
-
-                    # Multiply the edge mask by the diagonal mask to not have connections with itself: 
-                    edge_mask *= diag_mask
+    #                 h = batch[:, :, :-3].to(device)
+    #                 x = batch[:, :, -3:].to(device)
 
 
-                    # Calculate the loss: 
-                    nll = diffusion_model(x.to(device), h.to(device), node_mask.to(device), edge_mask.to(device))
-                    loss = nll.to(device)
-                    total_val_loss += nll
+    #                 # setup the edge_mask: 
+    #                 edge_mask = node_mask.unsqueeze(1)  * node_mask.unsqueeze(2)
+
+    #                 # Create mask for diagonal, as atoms cannot connect to themselves: 
+    #                 diag_mask = ~torch.eye(edge_mask.size(-1), device=edge_mask.device).unsqueeze(0).bool()
+
+    #                 # Expand to batch size: 
+    #                 diag_mask = diag_mask.expand(edge_mask.size())
+
+    #                 # Multiply the edge mask by the diagonal mask to not have connections with itself: 
+    #                 edge_mask *= diag_mask
+
+
+    #                 # Calculate the loss: 
+    #                 nll = diffusion_model(x.to(device), h.to(device), node_mask.to(device), edge_mask.to(device))
+    #                 loss = nll.to(device)
+    #                 total_val_loss += nll
                 
-            total_val_loss /= len(val_loader)
-            print(f"At epoch {epoch} \t Val Loss = {total_val_loss}")
-            wandb.log({"val_loss": total_val_loss})
+    #         total_val_loss /= len(val_loader)
+    #         print(f"At epoch {epoch} \t Val Loss = {total_val_loss}")
+    #         wandb.log({"val_loss": total_val_loss})
 
 
-    # Test the whole test set: 
-    total_test_loss = 0
-    diffusion_model.eval()
-    with torch.no_grad():
-        for batch, node_mask in tqdm(test_loader):
+    # # Test the whole test set: 
+    # total_test_loss = 0
+    # diffusion_model.eval()
+    # with torch.no_grad():
+    #     for batch, node_mask in tqdm(test_loader):
 
 
-            h = batch[:, :, :-3].to(device)
-            x = batch[:, :, -3:].to(device)
+    #         h = batch[:, :, :-3].to(device)
+    #         x = batch[:, :, -3:].to(device)
 
 
-            # setup the edge_mask: 
-            edge_mask = node_mask.unsqueeze(1)  * node_mask.unsqueeze(2)
+    #         # setup the edge_mask: 
+    #         edge_mask = node_mask.unsqueeze(1)  * node_mask.unsqueeze(2)
 
-            # Create mask for diagonal, as atoms cannot connect to themselves: 
-            diag_mask = ~torch.eye(edge_mask.size(-1), device=edge_mask.device).unsqueeze(0).bool()
+    #         # Create mask for diagonal, as atoms cannot connect to themselves: 
+    #         diag_mask = ~torch.eye(edge_mask.size(-1), device=edge_mask.device).unsqueeze(0).bool()
 
-            # Expand to batch size: 
-            diag_mask = diag_mask.expand(edge_mask.size())
+    #         # Expand to batch size: 
+    #         diag_mask = diag_mask.expand(edge_mask.size())
 
-            # Multiply the edge mask by the diagonal mask to not have connections with itself: 
-            edge_mask *= diag_mask
+    #         # Multiply the edge mask by the diagonal mask to not have connections with itself: 
+    #         edge_mask *= diag_mask
 
 
-            # Calculate the loss: 
-            nll = diffusion_model(x.to(device), h.to(device), node_mask.to(device), edge_mask.to(device))
-            loss = nll.to(device)
-            total_test_loss += nll
+    #         # Calculate the loss: 
+    #         nll = diffusion_model(x.to(device), h.to(device), node_mask.to(device), edge_mask.to(device))
+    #         loss = nll.to(device)
+    #         total_test_loss += nll
         
-    total_test_loss /= len(val_loader)
-    print(f"Total MSE Test Loss is:\t{total_test_loss}\n")
+    # total_test_loss /= len(val_loader)
+    # print(f"Total MSE Test Loss is:\t{total_test_loss}\n")
 
 
-    # Save the model: 
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
+    # # Save the model: 
+    # if not os.path.exists(folder_name):
+    #     os.makedirs(folder_name)
 
-    model_path = folder_name + f"Weights_Test_MSE_{total_test_loss:.3f}/"
-    sample_path = folder_name + "Samples/"
+    # model_path = folder_name + f"Weights_Test_MSE_{total_test_loss:.3f}/"
+    # sample_path = folder_name + "Samples/"
     
-    if not os.path.exists(model_path):
-        os.makedirs(model_path)
-    if not os.path.exists(sample_path):
-        os.makedirs(sample_path)
+    # if not os.path.exists(model_path):
+    #     os.makedirs(model_path)
+    # if not os.path.exists(sample_path):
+    #     os.makedirs(sample_path)
 
-    # Set the file path for saving the model weights
-    model_path = os.path.join(model_path, f"weights.pt")
+    # # Set the file path for saving the model weights
+    # model_path = os.path.join(model_path, f"weights.pt")
 
-    # Save model
-    torch.save(diffusion_model.state_dict(), model_path)
+    # # Save model
+    # torch.save(diffusion_model.state_dict(), model_path)
 
 
 
