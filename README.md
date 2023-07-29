@@ -39,7 +39,7 @@ The dataset used in this project comprises of W93 DFT simulations etc etc ect. I
 Dataset contains ZZZ: 
 
 <div align="center">
-  <img src="plots_and_images/dataset_examples.png" alt="Example Denoising image">
+  <img src="visualisations/dataset_examples.png" alt="Example Denoising image">
 </div>
 
 ### Setting up the W93 Dataset: 
@@ -68,7 +68,7 @@ To set up the dataset, follow these steps:
 ## Denoising EGNN Backbone
 
 <div align="center">
-  <img src="plots_and_images/denoised_example_good.png" alt="Example Denoising image">
+  <img src="visualisations/denoised_example_good.png" alt="Example Denoising image">
 </div>
 
 Process: 
