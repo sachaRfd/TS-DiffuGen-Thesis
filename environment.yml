@@ -1,0 +1,13 @@
+# Create the environment with the following line: 
+# conda env create -f environment.yml
+
+
+name: TSDiff
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.8
+  - pip
+  - pip:
+    - -r requirements.txt

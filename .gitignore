@@ -1,0 +1,44 @@
+# Ignore the pycache files: 
+*.pyc
+*.pyo
+__pycache__/
+
+# Ignore all __pycache__ folders in the entire project
+**/__pycache__/
+
+# Ignore the folder with all the saved model weights: 
+src/Diffusion/Clean_lightning/*
+src/Diffusion/Notebooks
+
+# Ignore the scripts for reactants only:
+src_reactants_only
+
+# Ignore Build stuff: 
+build
+DiffSach.egg-info
+dist
+
+# Ignore Pytorch Lightning / WandB stuff: 
+lightning_logs
+wandb
+
+
+# Ignore .tar files
+*.tar.gz
+
+# Ignore .H5 files
+*.h5
+
+# Ignore all Notebooks: 
+*.ipynb
+
+# Ignore reaction files in wb97xd3 folder
+data/Dataset_W93/data/TS/wb97xd3/*
+
+# Ignore the Clean Geometries:
+data/Dataset_W93/data/Clean_Geometries/*
+
+# Ignore the older implementations: 
+Diffusion_Project/Older_Implementations/
+
+# Ignore the sampling images: 
