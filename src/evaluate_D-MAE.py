@@ -1,18 +1,16 @@
 """
-Script for COV and MAT evaluation using INTER-ATOMIC DISTANCES: 
+Script for COV and MAT evaluation using INTER-ATOMIC DISTANCES:
 ---------------------------------------------------------------
 """
 
 import os
-from rdkit import Chem
-from rdkit.Chem import rdMolAlign as MA
 import pandas as pd
 import numpy as np
 
 
-
 def get_paths(sample_path):
-    """
+    """# noqa
+
     Load the files of molecules from a given sample path and organize them into true and generated samples.
         1. Iterate over one of the batch directories
         2. Iteraet over one of the molecule directories
@@ -32,9 +30,9 @@ def get_paths(sample_path):
 
     Raises:
         AssertionError: If the specified sample_path does not exist.
-    """  
+    """
 
-    # Check that the path exists: 
+    # Check that the path exists:
     assert os.path.exists(sample_path)
 
     # Iterate over all the directories and load the files that end with .xyz
@@ -43,7 +41,6 @@ def get_paths(sample_path):
         dir_path = os.path.join(sample_path, directory)
         if os.path.isdir(dir_path):
             number_of_molecules.append(directory)
-
 
     # Load the files of molecules
     true_samples = []
@@ -55,18 +52,32 @@ def get_paths(sample_path):
             mol_dir_path = os.path.join(batch_dir_path, mol_dir)
             if os.path.isdir(mol_dir_path):
                 files = os.listdir(mol_dir_path)
-                true_samples.extend([os.path.join(mol_dir_path, file) for file in files if 'true_sample' in file])
-                generated_samples.append([os.path.join(mol_dir_path, file) for file in files if 'true' not in file])  # Because True prod and reactant have TRUE  in their names
+                true_samples.extend(
+                    [
+                        os.path.join(mol_dir_path, file)
+                        for file in files
+                        if "true_sample" in file
+                    ]
+                )
+                generated_samples.append(
+                    [
+                        os.path.join(mol_dir_path, file)
+                        for file in files
+                        if "true" not in file
+                    ]
+                )  # Because True prod and reactant have TRUE  in their names
 
     # Print The number of true samples and generated samples
-    print(f"\tThere are {len(true_samples)} samples and {len(generated_samples[0])} generated samples in total.\n\tThere are {int(len(generated_samples[0])/len(true_samples))} generated samples per true sample.\n")
+    print(
+        f"\tThere are {len(true_samples)} samples and {len(generated_samples[0])} generated samples in total.\n\tThere are {int(len(generated_samples[0])/len(true_samples))} generated samples per true sample.\n"  # noqa
+    )
 
     return true_samples, generated_samples
 
 
-
 def import_xyz_file(molecule_path):
-    """
+    """# noqa
+
     Imports an XYZ file and loads it into an RDKit molecule object.
 
     Args:
@@ -82,23 +93,22 @@ def import_xyz_file(molecule_path):
         If true_samples is True, the function reads the file, calculates the number of initial lines,
         and adds this count to the top of the file before loading the molecule (Needed for RDKit).
     """
-    # Read the XYZ File: 
-    with open(molecule_path, 'r') as xyz_file:
+    # Read the XYZ File:
+    with open(molecule_path, "r") as xyz_file:
         lines = xyz_file.readlines()
 
-    # Create the tuples: 
+    # Create the tuples:
     molecule = []
 
-    # For NEW XYZ format: 
-    # for atom in lines[2:]:  # Skip the first 2 lines (as it is just Number of atoms and empty line)
-
-    for atom in lines[0:]:  # Skip the first 2 lines (as it is just Number of atoms and empty line)
+    # For NEW XYZ format:# Skip the first 2 lines (as it is just Number of atoms and empty line)    # noqa
+    # for atom in lines[2:]:
+    for atom in lines[0:]:
         # Make sure to check we are not using the hydrogens in our calculations
         if atom[0] == "H":
-            # print(atom[0]) 
+            # print(atom[0])
             continue
         else:
-            # Split the string by spaces: 
+            # Split the string by spaces:
             atom = atom.split(" ")
             # Convert the strings to floats:
             mol = (float(atom[1]), float(atom[2]), float(atom[3]))
@@ -107,9 +117,9 @@ def import_xyz_file(molecule_path):
     return molecule
 
 
-
 def create_lists(original_path):
-    """
+    """# noqa
+
     Create lists of true and generated molecules from the given original path.
 
     This function utilizes helper functions to extract true and generated molecule paths,
@@ -131,14 +141,13 @@ def create_lists(original_path):
         molecules are assumed to have been saved using the function that omits the number count on the top.
     """
     true_paths, generated_paths = get_paths(original_path)
-    
-    # First we deal with getting the list of true samples: 
+
+    # First we deal with getting the list of true samples:
     true_molecules = []  # Dtype are RDKIT molecules
     for true_path in true_paths:
         true_molecules.append(import_xyz_file(true_path))
 
-
-    # Next the generated molecules: 
+    # Next the generated molecules:
     generated_molecules = []
     for sample_mol in generated_paths:
         gen_mols = []
@@ -149,9 +158,9 @@ def create_lists(original_path):
     return true_molecules, generated_molecules
 
 
-
 def calculate_distance_matrix(coordinates):
-    """
+    """# noqa
+
     Calculate the pairwise distance matrix from a list of 3D coordinates.
 
     This function takes a list of 3D coordinates (x, y, z) for each atom and computes
@@ -170,14 +179,19 @@ def calculate_distance_matrix(coordinates):
     distance_matrix = np.zeros((num_atoms, num_atoms))
 
     for i in range(num_atoms):
-        for j in range(i+1, num_atoms):
-            dist = np.linalg.norm(np.array(coordinates[i]) - np.array(coordinates[j]))
+        for j in range(i + 1, num_atoms):
+            dist = np.linalg.norm(
+                np.array(coordinates[i]) - np.array(coordinates[j])
+            )  # noqa
+
             distance_matrix[i, j] = dist
             distance_matrix[j, i] = dist
     return distance_matrix
 
+
 def calculate_DMAE(gen_mol, true_mol):
-    """
+    """# noqa
+
     Calculate the D-MAE (Difference Mean Absolute Error) between the inter-atomic distance matrices
     of the generated molecule and the true molecule, following the approach in the TS-DIFF paper.
 
@@ -188,12 +202,12 @@ def calculate_DMAE(gen_mol, true_mol):
             It should be a symmetric 2D list or array representing the pairwise distances between atoms.
         true_mol (list): The inter-atomic distance matrix of the true molecule.
             It should also be a symmetric 2D list or array representing the pairwise distances between atoms.
-        
+
         Both matrices must have the same number of atoms for a valid comparison.
 
     Returns:
         float: The D-MAE value, representing the difference mean absolute error between the two distance matrices.
-        
+
     Properties:
         - The inter-atomic distance matrices are assumed to be symmetric matrices, where the element at (i, j)
           represents the distance between atom i and atom j, and is equal to the distance between atom j and atom i.
@@ -214,7 +228,9 @@ def calculate_DMAE(gen_mol, true_mol):
     """
 
     # Ensure both matrices have the same number of atoms
-    assert len(gen_mol) == len(true_mol), "Number of atoms in generated and true molecules must be the same."
+    assert len(gen_mol) == len(
+        true_mol
+    ), "Number of atoms in generated and true molecules must be the same."
 
     # Get the number of atoms
     N_atom = len(gen_mol)
@@ -227,13 +243,15 @@ def calculate_DMAE(gen_mol, true_mol):
             dmae_sum += abs(gen_mol[i][j] - true_mol[i][j])
             count += 1
 
-    # The First part of the following formula is basically just the average of all the atomic distances            
-    dmae = 2.0 / (N_atom * (N_atom - 1)) * dmae_sum 
+    # The First part of the following formula is basically just the average of all the atomic distances    # noqa
+
+    dmae = 2.0 / (N_atom * (N_atom - 1)) * dmae_sum
     return dmae
 
 
 def create_dmae_table(true_mols, gen_mols):
-    """
+    """# noqa
+
     Create a table of Difference Mean Absolute Error (D-MAE) values between reference and generated samples.
 
     This function calculates the D-MAE for each generated molecule compared to the reference molecule and
@@ -263,28 +281,34 @@ def create_dmae_table(true_mols, gen_mols):
     rows = []
     # ZIP the true molecule and a list of generated samples to compare
     for true_mol, gen_sample in zip(true_mols, gen_mols):
-
-        # Calculate the distance matrix of the true_molecules: 
+        # Calculate the distance matrix of the true_molecules:
         true_molecule_dist_matrix = calculate_distance_matrix(true_mol)
 
         row = []
         for gen_mol in gen_sample:
-
-            # Calculate the distance matrix of the generated molecule: 
+            # Calculate the distance matrix of the generated molecule:
             generated_molecule_dist_matrix = calculate_distance_matrix(gen_mol)
-            
-            # Calculate the D-MAE between the true sample and the generated samples: 
-            dmae = calculate_DMAE(true_mol=true_molecule_dist_matrix, gen_mol=generated_molecule_dist_matrix)
+
+            # Calculate the D-MAE between the true sample and the generated samples:    # noqa
+
+            dmae = calculate_DMAE(
+                true_mol=true_molecule_dist_matrix,
+                gen_mol=generated_molecule_dist_matrix,
+            )
             row.append(dmae)
         rows.append(row)
 
-    df = pd.DataFrame(rows, columns=[f"Sample {i+1}" for i in range(len(rows[0]))])
+    df = pd.DataFrame(
+        rows, columns=[f"Sample {i+1}" for i in range(len(rows[0]))]
+    )  # noqa
+
     return df
-    
+
 
 def calc_cov_mat(dmae_matrix, cov_threshold=0.1):
     """
-    Calculate the COV and MAT scores based on the input D-MAE matrix.
+    Calculate the COV and MAT scores based on the input D-MAE matrix.    # noqa
+
 
     COV (Coverage):
     - The COV is the percentage of each generated molecule that has a D-MAE score smaller than a threshold.
@@ -301,7 +325,7 @@ def calc_cov_mat(dmae_matrix, cov_threshold=0.1):
 
     Returns:
         tuple: A tuple containing the calculated MAT-R (Minimum Average D-MAE) mean and median scores, and the COV-R score.
-        
+
     Notes:
         - The D-MAE matrix should have generated samples as rows and different samples as columns.
         - MAT-R Mean: The mean value of the minimum D-MAE scores across all generated samples.
@@ -316,26 +340,27 @@ def calc_cov_mat(dmae_matrix, cov_threshold=0.1):
     print(f"MAT-R Mean score is\t{mat_r_mean}")
     print(f"MAT-R Median score is\t{mat_r_median}")
 
-    # Next we calclate the COV score: 
+    # Next we calclate the COV score:
     cov_r = (dmae_matrix.min(axis=1) < cov_threshold).mean()
-    print(f"The COV-R score with a threshold of\t{cov_threshold}\tis\t{cov_r * 100} %.")
+    print(
+        f"The COV-R score with a threshold of\t{cov_threshold}\tis\t{cov_r * 100} %."  # noqa
+    )  # noqa
 
     return None
 
 
-
 if __name__ == "__main__":
     print("Running Evaluation Script\n")
+    sample_path = "src/Diffusion/Clean_lightning/BEST_MODEL_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_2000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Samples_3"  # noqa
 
-    sample_path = "src/Diffusion/Clean_lightning/BEST_MODEL_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_2000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Samples_2"
-
-    # Generates the true and generated molcules: 
+    # Generates the true and generated molcules:
     true_molecules, generated_molecules = create_lists(sample_path)
 
-    # Create table of D-MAE: 
-    table = create_dmae_table(true_mols=true_molecules, gen_mols=generated_molecules)
+    # Create table of D-MAE:
+    table = create_dmae_table(
+        true_mols=true_molecules, gen_mols=generated_molecules
+    )  # noqa
     print(table)
 
-    # Get the COVerage and MATching scores: 
-    calc_cov_mat(table.iloc[:, :1], cov_threshold=0.2)
-     
+    # Get the COVerage and MATching scores:
+    calc_cov_mat(table, cov_threshold=0.2)

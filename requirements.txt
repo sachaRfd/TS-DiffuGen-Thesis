@@ -9,3 +9,4 @@ rdkit
 pandas
 tqdm
 IPython
+pytest

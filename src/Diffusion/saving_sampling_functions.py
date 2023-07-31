@@ -8,7 +8,7 @@ import torch
 
 def write_xyz_file(data, filename):
     """
-    Writes Molecule Conformation data into an XYZ file in PyMol Format.
+    Writes Molecule Conformation data into an XYZ file in PyMol Format.# noqa
 
     Parameters:
         data (list of lists): A list containing the conformation data of the molecule.
@@ -28,20 +28,29 @@ def write_xyz_file(data, filename):
         Each line contains the atom name, x-coordinate, y-coordinate, and z-coordinate separated
         by spaces.
     """
-    with open(filename, 'w') as f:
-        # The first line should be the size of the molecule and the second line should be empty: 
+    with open(filename, "w") as f:
+        # The first line should be the size of the molecule and the second line should be empty:# noqa
         f.write(str(len(data)) + "\n\n")
         for atom_list in data:
-            line = str(atom_list[0] + " " + atom_list[1] + " " + atom_list[2] + " " + atom_list[3])
+            line = str(
+                atom_list[0]
+                + " "
+                + atom_list[1]
+                + " "
+                + atom_list[2]
+                + " "
+                + atom_list[3]
+            )
             # print(line)
-            f.write(line + '\n')
+            f.write(line + "\n")
 
-def return_xyz(sample, dataset, remove_hydrogen = False):
+
+def return_xyz(sample, dataset, remove_hydrogen=False):
     """
     Sets up sample into XYZ format.
 
     Parameters:
-        sample (list of lists): A list of molecular structures (samples), where each sample is a list of atoms.
+        sample (list of lists): A list of molecular structures (samples), where each sample is a list of atoms.# noqa
             Each atom is represented as a list with either 4 or 5 elements depending on the value of `remove_hydrogen`.
             If `remove_hydrogen` is False, each atom list contains the atom name (str), x-coordinate (float),
             y-coordinate (float), z-coordinate (float), and optionally an atom property (int).
@@ -84,18 +93,22 @@ def return_xyz(sample, dataset, remove_hydrogen = False):
                 atom_encoding = atom[:3].to(torch.int8)
             else:
                 atom_encoding = atom[:4].to(torch.int8)
-            if list(atom_encoding) in dataset.ohe_dict.values():    # Check if we are dealing with real atom or just padding
-                key = next(key for key, value in dataset.ohe_dict.items() if value == list(atom_encoding))
+            if (
+                list(atom_encoding) in dataset.ohe_dict.values()
+            ):  # Check if we are dealing with real atom or just padding
+                key = next(
+                    key
+                    for key, value in dataset.ohe_dict.items()
+                    if value == list(atom_encoding)
+                )
                 atom_list.append(key)
                 if remove_hydrogen:
                     coords = atom[3:].detach()
                 else:
                     coords = atom[4:].detach()
                 atom_list.extend([str(coord.item()) for coord in coords])
-                clean_molecule.append(atom_list)  # Append atom_list to clean_molecule
+                clean_molecule.append(
+                    atom_list
+                )  # Append atom_list to clean_molecule  # noqa
         xyz_data.append(clean_molecule)  # Append clean_molecule to xyz_data
     return xyz_data
-
-
-if __name__ == "__main__":
-    print("Running Script")

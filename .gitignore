@@ -1,7 +1,9 @@
 # Ignore the pycache files: 
 *.pyc
 *.pyo
+.pytest_cache
 __pycache__/
+.vscode
 
 # Ignore all __pycache__ folders in the entire project
 **/__pycache__/
@@ -42,3 +44,8 @@ data/Dataset_W93/data/Clean_Geometries/*
 Diffusion_Project/Older_Implementations/
 
 # Ignore the sampling images: 
+same_number_of_stereo_centres
+
+
+# Temporary Pylightning checkpoints: 
+Diffusion_5_layer_2000_timesteps

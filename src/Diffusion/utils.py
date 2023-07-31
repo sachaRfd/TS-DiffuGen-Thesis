@@ -13,7 +13,7 @@ def sum_except_batch(x):
         x (torch.Tensor): Input tensor of shape (batch_size, *).
 
     Returns:
-        torch.Tensor: A tensor of shape (batch_size,) containing the sum of elements in each tensor of `x`, 
+        torch.Tensor: A tensor of shape (batch_size,) containing the sum of elements in each tensor of `x`,
                       excluding the batch dimension.
     """
     return x.reshape(x.size(0), -1).sum(dim=-1)
@@ -41,6 +41,7 @@ def remove_mean_including_reactants_and_products(x):
 
     return x
 
+
 def remove_mean_just_ts(x):
     assert x.shape[2] == 3
     mean_ts = torch.mean(x, dim=1, keepdim=True)
@@ -50,8 +51,19 @@ def remove_mean_just_ts(x):
     return x
 
 
+def setup_device():
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        print("Device is: ", device)
+    else:
+        device = torch.device("cpu")
+        print("Device is: ", device)
+
+    return device
+
+
 def assert_mean_zero(x):
-    """
+    """# noqa
     Asserts that the mean of each row in the input tensor `x` (excluding the One-Hot-Encoded atom types) is approximately zero.
 
     Args:
@@ -67,18 +79,21 @@ def assert_mean_zero(x):
     # print(mean)
     assert mean < 1e-5
 
+
 def remove_mean_with_mask(x, node_mask):
     masked_max_abs_value = (x * (1 - node_mask)).abs().sum().item()
-    assert masked_max_abs_value < 1e-5, f'Error {masked_max_abs_value} too high'
+    assert masked_max_abs_value < 1e-5, f"Error {masked_max_abs_value} too high"
     N = node_mask.sum(1, keepdims=True)
 
     mean = torch.sum(x, dim=1, keepdim=True) / N
     x = x - mean * node_mask
     return x
 
+
 def assert_correctly_masked(variable, node_mask):
-    assert (variable * (1 - node_mask.to(variable.device))).abs().max().item() < 1e-4, \
-        'Variables not masked properly.'
+    assert (
+        variable * (1 - node_mask.to(variable.device))
+    ).abs().max().item() < 1e-4, "Variables not masked properly."
 
 
 def assert_mean_zero_with_mask(x, node_mask, eps=1e-10):
@@ -86,13 +101,12 @@ def assert_mean_zero_with_mask(x, node_mask, eps=1e-10):
     largest_value = x.abs().max().item()
     error = torch.sum(x, dim=1, keepdim=True).abs().max().item()
     rel_error = error / (largest_value + eps)
-    assert rel_error < 1e-2, f'Mean is not zero, relative_error {rel_error}'
+    assert rel_error < 1e-2, f"Mean is not zero, relative_error {rel_error}"
 
 
 def sample_center_gravity_zero_gaussian_with_mask(size, device, node_mask):
     assert len(size) == 3
     x = torch.randn(size, device=device)
-
 
     if len(node_mask.size()) == 2:  # Expand so that you can remove it from X
         node_mask = node_mask.unsqueeze(2).expand(size)
@@ -132,14 +146,11 @@ def sample_center_gravity_zero_gaussian(size, device):
     return x_projected
 
 
-
-
-
 def standard_gaussian_log_likelihood(x):
     """
     Computes the log-likelihood of a standard Gaussian distribution for a given input tensor.
 
-    No Euclidian Distances are accounted for here unlike the centred-gravity function above. 
+    No Euclidian Distances are accounted for here unlike the centred-gravity function above.
 
     Args:
         x (torch.Tensor): Input tensor.
@@ -150,7 +161,7 @@ def standard_gaussian_log_likelihood(x):
     """
     assert len(x.size()) == 3  # Check 3D
     assert x.shape[2] == 3  # Assert that we are only doing this for the TS
-    log_px = sum_except_batch(-0.5 * x * x - 0.5 * np.log(2*np.pi))
+    log_px = sum_except_batch(-0.5 * x * x - 0.5 * np.log(2 * np.pi))
     return log_px
 
 
@@ -161,16 +172,14 @@ def sample_gaussian(size, device):
     assert len(size) == 3
     assert size[2] == 3  # Check that we are only adding noise to TS
 
-
     x = torch.randn(size, device=device)
     return x
-
 
 
 # Rotation data augmntation
 def random_rotation(x, h):
     """
-    
+
     Adapted from: https://github.com/ehoogeboom/e3_diffusion_for_molecules/blob/main/utils.py
 
 
@@ -178,29 +187,28 @@ def random_rotation(x, h):
 
 
     Perform Random Rotations during training to augment the model and train it on the rotation side of E(3)-Equivariance
-    
+
     """
     bs, _, n_dims = x.size()
     device = x.device
     angle_range = np.pi * 2
 
-
-    # Seperate the Reactant/Product from h: 
+    # Seperate the Reactant/Product from h:
     product = h[:, :, -3:]
     reactant = h[:, :, -6:-3]
-
-
 
     assert n_dims == 3  # Make sure we have 3D Coordinates
 
     # Build Rx
     Rx = torch.eye(3).unsqueeze(0).repeat(bs, 1, 1).to(device)
-    theta = torch.rand(bs, 1, 1).to(device) * angle_range - np.pi   # Random theta angle to rotate
+    theta = (
+        torch.rand(bs, 1, 1).to(device) * angle_range - np.pi
+    )  # Random theta angle to rotate
     cos = torch.cos(theta)
     sin = torch.sin(theta)
     Rx[:, 1:2, 1:2] = cos
     Rx[:, 1:2, 2:3] = sin
-    Rx[:, 2:3, 1:2] = - sin
+    Rx[:, 2:3, 1:2] = -sin
     Rx[:, 2:3, 2:3] = cos
 
     # Build Ry
@@ -222,7 +230,6 @@ def random_rotation(x, h):
     Rz[:, 0:1, 1:2] = sin
     Rz[:, 1:2, 0:1] = -sin
     Rz[:, 1:2, 1:2] = cos
-
 
     # Perform the rotation on the Transition state
     x = x.transpose(1, 2)
@@ -257,65 +264,55 @@ def random_rotation(x, h):
     # Transpose back the to the original shape
     product = product.transpose(1, 2)
 
-
     # Concatenate the reactant and product back together
     h[:, :, -3:] = product
     h[:, :, -6:-3] = reactant
 
-
-
     return x.contiguous(), h  # Returns contigous memory position
-
-
-
 
 
 if __name__ == "__main__":
     print("Running Tests")
 
-    # Let's check that all the above functions work as intended here !!!    
+    # Let's check that all the above functions work as intended here !!!
     dataset = QM90_TS(directory="Dataset/data/Clean_Geometries/")
     train_loader = DataLoader(dataset=dataset, batch_size=64, shuffle=True)
-
 
     example_sample = next(iter(train_loader))
 
     # print(next(iter(train_loader)))
 
-# Now we can verify that each function works as intended: 
-    
-    # Sum_except_batch: 
+    # Now we can verify that each function works as intended:
+
+    # Sum_except_batch:
     sum_batch = sum_except_batch(example_sample)
     # print(sum_batch)
 
-
     # Remove Mean:
-    fake_batch_mean_removed = remove_mean_including_reactants_and_products(example_sample)
+    fake_batch_mean_removed = remove_mean_including_reactants_and_products(
+        example_sample
+    )
     # print((fake_batch_mean_removed == example_sample).sum())
     assert_mean_zero(fake_batch_mean_removed[:, :, 4:7])
 
-
-    # Remove mean of TS: 
+    # Remove mean of TS:
     TS_removed_mean = remove_mean_just_ts(example_sample[:, :, 10:13])
     # print(TS_removed_mean)
 
+    # Assert mean is 0 --> it should already be the case:
+    assert_mean_zero(example_sample[:, :, 4:7])
 
-    # Assert mean is 0 --> it should already be the case: 
-    assert_mean_zero(example_sample[:, : , 4:7])
-
-    
-    # Sample random gaussian like the shape of TS: 
-    random_ts_noise = sample_center_gravity_zero_gaussian(example_sample[:, :, 10:].shape, "cpu")
+    # Sample random gaussian like the shape of TS:
+    random_ts_noise = sample_center_gravity_zero_gaussian(
+        example_sample[:, :, 10:].shape, "cpu"
+    )
     # print(random_ts_noise)
     assert_mean_zero(random_ts_noise)
 
-
-    # Testing the other Log likelihood function: 
+    # Testing the other Log likelihood function:
     log_hood_2 = standard_gaussian_log_likelihood(example_sample[:, :, 10:])
     # print(log_hood_2)
 
-
-    # Testing the Rajdom gaussian sampling that is not centred on 0: 
+    # Testing the Rajdom gaussian sampling that is not centred on 0:
     random_noise = sample_gaussian(example_sample[:, :, 10:13].shape, "cpu")
     # assert_mean_zero(random_noise)  # Should cause an error
-

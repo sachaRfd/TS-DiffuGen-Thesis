@@ -1,4 +1,4 @@
-"""
+"""    # noqa
 Script for Equivariant Graph Neural Networks:
 ---------------------------------------------
 
@@ -36,9 +36,20 @@ from tqdm import tqdm
 
 from Dataset_W93.dataset_class import QM90_TS
 
+
 class GCL(nn.Module):
-    def __init__(self, input_nf, output_nf, hidden_nf, normalization_factor, aggregation_method,
-                 edges_in_d=0, nodes_att_dim=0, act_fn=nn.SiLU(), attention=False):
+    def __init__(
+        self,
+        input_nf,
+        output_nf,
+        hidden_nf,
+        normalization_factor,
+        aggregation_method,
+        edges_in_d=0,
+        nodes_att_dim=0,
+        act_fn=nn.SiLU(),
+        attention=False,
+    ):
         super(GCL, self).__init__()
         input_edge = input_nf * 2
         self.normalization_factor = normalization_factor
@@ -46,23 +57,27 @@ class GCL(nn.Module):
         self.attention = attention
 
         self.edge_mlp = nn.Sequential(
-            nn.Linear(input_edge + edges_in_d, hidden_nf),  # Difference here does not include + edge_coords_nf in input
+            nn.Linear(
+                input_edge + edges_in_d, hidden_nf
+            ),  # Difference here does not include + edge_coords_nf in input
             act_fn,
             nn.Linear(hidden_nf, hidden_nf),
-            act_fn)
+            act_fn,
+        )
 
         self.node_mlp = nn.Sequential(
             nn.Linear(hidden_nf + input_nf + nodes_att_dim, hidden_nf),
             act_fn,
-            nn.Linear(hidden_nf, output_nf))
+            nn.Linear(hidden_nf, output_nf),
+        )
 
         if self.attention:
-            self.att_mlp = nn.Sequential(
-                nn.Linear(hidden_nf, 1),
-                nn.Sigmoid())
+            self.att_mlp = nn.Sequential(nn.Linear(hidden_nf, 1), nn.Sigmoid())
 
-    def edge_model(self, source, target, edge_attr, edge_mask):  # Here it uses edge attr instead of radial
-        if edge_attr is None: 
+    def edge_model(
+        self, source, target, edge_attr, edge_mask
+    ):  # Here it uses edge attr instead of radial
+        if edge_attr is None:
             out = torch.cat([source, target], dim=1)
         else:
             out = torch.cat([source, target, edge_attr], dim=1)
@@ -80,9 +95,13 @@ class GCL(nn.Module):
 
     def node_model(self, x, edge_index, edge_attr, node_attr):
         row, col = edge_index
-        agg = unsorted_segment_sum(edge_attr, row, num_segments=x.size(0),
-                                   normalization_factor=self.normalization_factor,
-                                   aggregation_method=self.aggregation_method)
+        agg = unsorted_segment_sum(
+            edge_attr,
+            row,
+            num_segments=x.size(0),
+            normalization_factor=self.normalization_factor,
+            aggregation_method=self.aggregation_method,
+        )
         if node_attr is not None:
             agg = torch.cat([x, agg, node_attr], dim=1)
         else:
@@ -90,7 +109,15 @@ class GCL(nn.Module):
         out = x + self.node_mlp(agg)
         return out, agg
 
-    def forward(self, h, edge_index, edge_attr=None, node_attr=None, node_mask=None, edge_mask=None):
+    def forward(
+        self,
+        h,
+        edge_index,
+        edge_attr=None,
+        node_attr=None,
+        node_mask=None,
+        edge_mask=None,
+    ):
         row, col = edge_index
         edge_feat, mij = self.edge_model(h[row], h[col], edge_attr, edge_mask)
         h, agg = self.node_model(h, edge_index, edge_feat, node_attr)
@@ -100,8 +127,16 @@ class GCL(nn.Module):
 
 
 class EquivariantUpdate(nn.Module):
-    def __init__(self, hidden_nf, normalization_factor, aggregation_method,
-                 edges_in_d=1, act_fn=nn.SiLU(), tanh=False, coords_range=10.0):
+    def __init__(
+        self,
+        hidden_nf,
+        normalization_factor,
+        aggregation_method,
+        edges_in_d=1,
+        act_fn=nn.SiLU(),
+        tanh=False,
+        coords_range=10.0,
+    ):
         super(EquivariantUpdate, self).__init__()
         self.tanh = tanh
         self.coords_range = coords_range
@@ -113,36 +148,71 @@ class EquivariantUpdate(nn.Module):
             act_fn,
             nn.Linear(hidden_nf, hidden_nf),
             act_fn,
-            layer)
+            layer,
+        )
         self.normalization_factor = normalization_factor
         self.aggregation_method = aggregation_method
 
-    def coord_model(self, h, coord, edge_index, coord_diff, edge_attr, edge_mask):
+    def coord_model(
+        self, h, coord, edge_index, coord_diff, edge_attr, edge_mask
+    ):  # noqa
         row, col = edge_index
         input_tensor = torch.cat([h[row], h[col], edge_attr], dim=1)
         if self.tanh:
-            trans = coord_diff * torch.tanh(self.coord_mlp(input_tensor)) * self.coords_range
+            trans = (
+                coord_diff
+                * torch.tanh(self.coord_mlp(input_tensor))
+                * self.coords_range
+            )
         else:
             trans = coord_diff * self.coord_mlp(input_tensor)
         if edge_mask is not None:
             trans = trans * edge_mask
-        agg = unsorted_segment_sum(trans, row, num_segments=coord.size(0),
-                                   normalization_factor=self.normalization_factor,
-                                   aggregation_method=self.aggregation_method)
+        agg = unsorted_segment_sum(
+            trans,
+            row,
+            num_segments=coord.size(0),
+            normalization_factor=self.normalization_factor,
+            aggregation_method=self.aggregation_method,
+        )
         coord = coord + agg
         return coord
 
-    def forward(self, h, coord, edge_index, coord_diff, edge_attr=None, node_mask=None, edge_mask=None):
-        coord = self.coord_model(h, coord, edge_index, coord_diff, edge_attr, edge_mask)
+    def forward(
+        self,
+        h,
+        coord,
+        edge_index,
+        coord_diff,
+        edge_attr=None,
+        node_mask=None,
+        edge_mask=None,
+    ):
+        coord = self.coord_model(
+            h, coord, edge_index, coord_diff, edge_attr, edge_mask
+        )  # noqa
         if node_mask is not None:
             coord = coord * node_mask
         return coord
 
 
 class EquivariantBlock(nn.Module):
-    def __init__(self, hidden_nf, edge_feat_nf=2, device='cpu', act_fn=nn.SiLU(), n_layers=2, attention=True,
-                 norm_diff=True, tanh=False, coords_range=15, norm_constant=1, sin_embedding=None,
-                 normalization_factor=100, aggregation_method='sum'):
+    def __init__(
+        self,
+        hidden_nf,
+        edge_feat_nf=2,
+        device="cpu",
+        act_fn=nn.SiLU(),
+        n_layers=2,
+        attention=True,
+        norm_diff=True,
+        tanh=False,
+        coords_range=15,
+        norm_constant=1,
+        sin_embedding=None,
+        normalization_factor=100,
+        aggregation_method="sum",
+    ):
         super(EquivariantBlock, self).__init__()
         self.hidden_nf = hidden_nf
         self.device = device
@@ -155,25 +225,52 @@ class EquivariantBlock(nn.Module):
         self.aggregation_method = aggregation_method
 
         for i in range(0, n_layers):
-            self.add_module("gcl_%d" % i, GCL(self.hidden_nf, self.hidden_nf, self.hidden_nf, edges_in_d=edge_feat_nf,
-                                              act_fn=act_fn, attention=attention,
-                                              normalization_factor=self.normalization_factor,
-                                              aggregation_method=self.aggregation_method))
-        self.add_module("gcl_equiv", EquivariantUpdate(hidden_nf, edges_in_d=edge_feat_nf, act_fn=nn.SiLU(), tanh=tanh,
-                                                       coords_range=self.coords_range_layer,
-                                                       normalization_factor=self.normalization_factor,
-                                                       aggregation_method=self.aggregation_method))
+            self.add_module(
+                "gcl_%d" % i,
+                GCL(
+                    self.hidden_nf,
+                    self.hidden_nf,
+                    self.hidden_nf,
+                    edges_in_d=edge_feat_nf,
+                    act_fn=act_fn,
+                    attention=attention,
+                    normalization_factor=self.normalization_factor,
+                    aggregation_method=self.aggregation_method,
+                ),
+            )
+        self.add_module(
+            "gcl_equiv",
+            EquivariantUpdate(
+                hidden_nf,
+                edges_in_d=edge_feat_nf,
+                act_fn=nn.SiLU(),
+                tanh=tanh,
+                coords_range=self.coords_range_layer,
+                normalization_factor=self.normalization_factor,
+                aggregation_method=self.aggregation_method,
+            ),
+        )
         self.to(self.device)
 
-    def forward(self, h, x, edge_index, node_mask=None, edge_mask=None, edge_attr=None):
+    def forward(
+        self, h, x, edge_index, node_mask=None, edge_mask=None, edge_attr=None
+    ):  # noqa
         # Edit Emiel: Remove velocity as input
         distances, coord_diff = coord2diff(x, edge_index, self.norm_constant)
         if self.sin_embedding is not None:
             distances = self.sin_embedding(distances)
         edge_attr = torch.cat([distances, edge_attr], dim=1)
         for i in range(0, self.n_layers):
-            h, _ = self._modules["gcl_%d" % i](h, edge_index, edge_attr=edge_attr, node_mask=node_mask, edge_mask=edge_mask)
-        x = self._modules["gcl_equiv"](h, x, edge_index, coord_diff, edge_attr, node_mask, edge_mask)
+            h, _ = self._modules["gcl_%d" % i](
+                h,
+                edge_index,
+                edge_attr=edge_attr,
+                node_mask=node_mask,
+                edge_mask=edge_mask,
+            )
+        x = self._modules["gcl_equiv"](
+            h, x, edge_index, coord_diff, edge_attr, node_mask, edge_mask
+        )
 
         # Important, the bias of the last linear might be non-zero
         if node_mask is not None:
@@ -182,16 +279,32 @@ class EquivariantBlock(nn.Module):
 
 
 class EGNN(nn.Module):
-    def __init__(self, in_node_nf, in_edge_nf, hidden_nf, device='cpu', act_fn=nn.SiLU(), n_layers=3, attention=False,
-                 norm_diff=True, out_node_nf=None, tanh=False, coords_range=5, norm_constant=1, inv_sublayers=2,
-                 sin_embedding=False, normalization_factor=100, aggregation_method='sum'):
+    def __init__(
+        self,
+        in_node_nf,
+        in_edge_nf,
+        hidden_nf,
+        device="cpu",
+        act_fn=nn.SiLU(),
+        n_layers=3,
+        attention=False,
+        norm_diff=True,
+        out_node_nf=None,
+        tanh=False,
+        coords_range=5,
+        norm_constant=1,
+        inv_sublayers=2,
+        sin_embedding=False,
+        normalization_factor=100,
+        aggregation_method="sum",
+    ):
         super(EGNN, self).__init__()
         if out_node_nf is None:
             out_node_nf = in_node_nf
         self.hidden_nf = hidden_nf
         self.device = device
         self.n_layers = n_layers
-        self.coords_range_layer = float(coords_range/n_layers)
+        self.coords_range_layer = float(coords_range / n_layers)
         self.norm_diff = norm_diff
         self.normalization_factor = normalization_factor
         self.aggregation_method = aggregation_method
@@ -206,36 +319,60 @@ class EGNN(nn.Module):
         self.embedding = nn.Linear(in_node_nf, self.hidden_nf)
         self.embedding_out = nn.Linear(self.hidden_nf, out_node_nf)
         for i in range(0, n_layers):
-            self.add_module("e_block_%d" % i, EquivariantBlock(hidden_nf, edge_feat_nf=edge_feat_nf, device=device,
-                                                               act_fn=act_fn, n_layers=inv_sublayers,
-                                                               attention=attention, norm_diff=norm_diff, tanh=tanh,
-                                                               coords_range=coords_range, norm_constant=norm_constant,
-                                                               sin_embedding=self.sin_embedding,
-                                                               normalization_factor=self.normalization_factor,
-                                                               aggregation_method=self.aggregation_method))
+            self.add_module(
+                "e_block_%d" % i,
+                EquivariantBlock(
+                    hidden_nf,
+                    edge_feat_nf=edge_feat_nf,
+                    device=device,
+                    act_fn=act_fn,
+                    n_layers=inv_sublayers,
+                    attention=attention,
+                    norm_diff=norm_diff,
+                    tanh=tanh,
+                    coords_range=coords_range,
+                    norm_constant=norm_constant,
+                    sin_embedding=self.sin_embedding,
+                    normalization_factor=self.normalization_factor,
+                    aggregation_method=self.aggregation_method,
+                ),
+            )
         self.to(self.device)
 
     def forward(self, h, x, edge_index, node_mask=None, edge_mask=None):
-        distances, _ = coord2diff(x, edge_index)        
+        distances, _ = coord2diff(x, edge_index)
         if self.sin_embedding is not None:
             distances = self.sin_embedding(distances)
         h = self.embedding(h)
         for i in range(0, self.n_layers):
-            h, x = self._modules["e_block_%d" % i](h, x, edge_index, node_mask=node_mask, edge_mask=edge_mask, edge_attr=distances)
+            h, x = self._modules["e_block_%d" % i](
+                h,
+                x,
+                edge_index,
+                node_mask=node_mask,
+                edge_mask=edge_mask,
+                edge_attr=distances,
+            )
 
         # Important, the bias of the last linear might be non-zero
         h = self.embedding_out(h)
         if node_mask is not None:
-            h = h * node_mask  # Squeeze as you want everything to be one dimension here
+            h = (
+                h * node_mask
+            )  # Squeeze as you want everything to be one dimension here# noqa
         return h, x
 
 
-
 class SinusoidsEmbeddingNew(nn.Module):
-    def __init__(self, max_res=15., min_res=15. / 2000., div_factor=4):
+    def __init__(self, max_res=15.0, min_res=15.0 / 2000.0, div_factor=4):
         super().__init__()
         self.n_frequencies = int(math.log(max_res / min_res, div_factor)) + 1
-        self.frequencies = 2 * math.pi * div_factor ** torch.arange(self.n_frequencies)/max_res
+        self.frequencies = (
+            2
+            * math.pi
+            * div_factor ** torch.arange(self.n_frequencies)
+            / max_res  # noqa
+        )
         self.dim = len(self.frequencies) * 2
 
     def forward(self, x):
@@ -250,22 +387,28 @@ def coord2diff(x, edge_index, norm_constant=1):
     coord_diff = x[row] - x[col]
     radial = torch.sum((coord_diff) ** 2, 1).unsqueeze(1)
     norm = torch.sqrt(radial + 1e-8)
-    coord_diff = coord_diff/(norm + norm_constant)
+    coord_diff = coord_diff / (norm + norm_constant)
     return radial, coord_diff
 
 
-def unsorted_segment_sum(data, segment_ids, num_segments, normalization_factor, aggregation_method: str):
+def unsorted_segment_sum(
+    data,
+    segment_ids,
+    num_segments,
+    normalization_factor,
+    aggregation_method: str,  # noqa
+):
     """Custom PyTorch op to replicate TensorFlow's `unsorted_segment_sum`.
-        Normalization: 'sum' or 'mean'.
+    Normalization: 'sum' or 'mean'.
     """
     result_shape = (num_segments, data.size(1))
     result = data.new_full(result_shape, 0)  # Init empty result tensor.
     segment_ids = segment_ids.unsqueeze(-1).expand(-1, data.size(1))
     result.scatter_add_(0, segment_ids, data)
-    if aggregation_method == 'sum':
+    if aggregation_method == "sum":
         result = result / normalization_factor
 
-    if aggregation_method == 'mean':
+    if aggregation_method == "mean":
         norm = data.new_zeros(result.shape)
         norm.scatter_add_(0, segment_ids, data.new_ones(data.shape))
         norm[norm == 0] = 1
@@ -281,8 +424,7 @@ def setup_device():
     return device
 
 
-
-# Added extra to create the edges: 
+# Added extra to create the edges:
 def get_edges(n_nodes):
     rows, cols = [], []
     for i in range(n_nodes):
@@ -311,6 +453,8 @@ def get_edges_batch(n_nodes, batch_size):
 
 
 _edges_dict = {}
+
+
 def get_adj_matrix(n_nodes, batch_size, device):
     if n_nodes in _edges_dict:
         edges_dic_b = _edges_dict[n_nodes]
@@ -324,13 +468,16 @@ def get_adj_matrix(n_nodes, batch_size, device):
                     for j in range(n_nodes):
                         rows.append(i + batch_idx * n_nodes)
                         cols.append(j + batch_idx * n_nodes)
-            edges = [torch.LongTensor(rows).to(device),
-                        torch.LongTensor(cols).to(device)]
+            edges = [
+                torch.LongTensor(rows).to(device),
+                torch.LongTensor(cols).to(device),
+            ]
             edges_dic_b[batch_size] = edges
             return edges
     else:
         _edges_dict[n_nodes] = {}
         return get_adj_matrix(n_nodes, batch_size, device)
+
 
 if __name__ == "__main__":
     print("Running Script")
@@ -345,14 +492,21 @@ if __name__ == "__main__":
     test_size = dataset_size - train_size - val_size
 
     # Perform the train-test split
-    train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size])
-
+    train_dataset, val_dataset, test_dataset = random_split(
+        dataset, [train_size, val_size, test_size]
+    )
 
     batch_size = 64
 
-    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=True)
+    train_loader = DataLoader(
+        dataset=train_dataset, batch_size=batch_size, shuffle=True
+    )
+    val_loader = DataLoader(
+        dataset=val_dataset, batch_size=batch_size, shuffle=True
+    )  # noqa
+    test_loader = DataLoader(
+        dataset=test_dataset, batch_size=batch_size, shuffle=True
+    )  # noqa
 
     device = setup_device()
 
@@ -362,19 +516,20 @@ if __name__ == "__main__":
     n_feat = 10
     x_dim = 3
 
-
-    egnn = EGNN(in_node_nf=n_feat, hidden_nf=64, out_node_nf=3, in_edge_nf=1, n_layers=3)
+    egnn = EGNN(
+        in_node_nf=n_feat, hidden_nf=64, out_node_nf=3, in_edge_nf=1, n_layers=3  # noqa
+    )
     egnn.to(device)
 
-    print(f"There are {sum(p.numel() for p in egnn.parameters() if p.requires_grad)} parameters in the model.")
+    print(
+        f"There are {sum(p.numel() for p in egnn.parameters() if p.requires_grad)} parameters in the model."  # noqa
+    )
 
-   # Define the loss function
+    # Define the loss function
     loss_fn = nn.MSELoss()
 
     # Define the optimizer
     optimizer = torch.optim.Adam(egnn.parameters(), lr=0.003)
-
-
 
     # Training loop
     epochs = 20
@@ -382,29 +537,31 @@ if __name__ == "__main__":
         train_loss = 0
         val_loss = 0
         egnn.train()  # Setup the training mode
-        
+
         for batch, node_mask in tqdm(train_loader):
             optimizer.zero_grad()
-            
+
             batch_size = batch.shape[0]
             n_nodes = batch.shape[1]
 
+            edge_mask = (node_mask.unsqueeze(1)) * (node_mask.unsqueeze(2))
 
-            edge_mask = (node_mask.unsqueeze(1))  * (node_mask.unsqueeze(2))
-   
-            # Create mask for diagonal, as atoms cannot connect to themselves: 
-            diag_mask = ~torch.eye(edge_mask.size(-1), device=edge_mask.device).unsqueeze(0).bool()
+            # Create mask for diagonal, as atoms cannot connect to themselves:
+            diag_mask = (
+                ~torch.eye(edge_mask.size(-1), device=edge_mask.device)
+                .unsqueeze(0)
+                .bool()
+            )
 
-            # Expand to batch size: 
+            # Expand to batch size:
             diag_mask = diag_mask.expand(edge_mask.size())
 
-            # Multiply the edge mask by the diagonal mask to not have connections with itself: 
+            # Multiply the edge mask by the diagonal mask to not have connections with itself:# noqa
             edge_mask *= diag_mask
-            edge_mask = edge_mask.view(batch_size*23*23, 1)
+            edge_mask = edge_mask.view(batch_size * 23 * 23, 1)
 
             h = batch[:, :, :10]
             x = batch[:, :, 10:]
-
 
             # Add noise to x samples
             noise = torch.randn_like(x)  # Adding Gaussian noise
@@ -415,25 +572,33 @@ if __name__ == "__main__":
 
             # Mulitply noise  with the node mask
             noise = noise * node_mask.unsqueeze(2).expand(noise.size())
-            
-            # Reshape the nodemask: 
-            node_mask = node_mask.view(batch_size*n_nodes, 1)
 
-            x_noisy = x + noise 
+            # Reshape the nodemask:
+            node_mask = node_mask.view(batch_size * n_nodes, 1)
 
+            x_noisy = x + noise
 
             h = h.view(-1, n_feat)
             x_noisy = x_noisy.view(-1, x_dim)
 
-            # edges, edge_attr = get_edges_batch(n_nodes, batch_size)  # Fully Connected edges which do not include itself. No need for an edge mask when using
-            edges = get_adj_matrix(n_nodes=n_nodes, batch_size=batch_size, device=device) 
+            edges = get_adj_matrix(
+                n_nodes=n_nodes, batch_size=batch_size, device=device
+            )
 
-            edges = [edge.to(device) for edge in edges]  # Convert each tensor in the list to GPU tensor
+            edges = [
+                edge.to(device) for edge in edges
+            ]  # Convert each tensor in the list to GPU tensor
 
-            h_out, x_out = egnn(h.to(device), x_noisy.to(device), edges, node_mask=node_mask.to(device), edge_mask=edge_mask.to(device))
+            h_out, x_out = egnn(
+                h.to(device),
+                x_noisy.to(device),
+                edges,
+                node_mask=node_mask.to(device),
+                edge_mask=edge_mask.to(device),
+            )
 
-            loss = loss_fn(x_out, noise.view(-1, x_dim).to(device) )
-                 
+            loss = loss_fn(x_out, noise.view(-1, x_dim).to(device))
+
             loss.backward()
             optimizer.step()
 
@@ -448,18 +613,21 @@ if __name__ == "__main__":
                 batch_size = batch.shape[0]
                 n_nodes = batch.shape[1]
 
+                edge_mask = (node_mask.unsqueeze(1)) * (node_mask.unsqueeze(2))
 
-                edge_mask = (node_mask.unsqueeze(1))  * (node_mask.unsqueeze(2))
-    
-                # Create mask for diagonal, as atoms cannot connect to themselves: 
-                diag_mask = ~torch.eye(edge_mask.size(-1), device=edge_mask.device).unsqueeze(0).bool()
+                # Create mask for diagonal, as atoms cannot connect to themselves:# noqa
+                diag_mask = (
+                    ~torch.eye(edge_mask.size(-1), device=edge_mask.device)
+                    .unsqueeze(0)
+                    .bool()
+                )
 
-                # Expand to batch size: 
+                # Expand to batch size:
                 diag_mask = diag_mask.expand(edge_mask.size())
 
-                # Multiply the edge mask by the diagonal mask to not have connections with itself: 
+                # Multiply the edge mask by the diagonal mask to not have connections with itself:# noqa
                 edge_mask *= diag_mask
-                edge_mask = edge_mask.view(batch_size*23*23, 1)
+                edge_mask = edge_mask.view(batch_size * 23 * 23, 1)
 
                 h = batch[:, :, :10]
                 x = batch[:, :, 10:]
@@ -472,20 +640,30 @@ if __name__ == "__main__":
 
                 # Mulitply noise  with the node mask
                 noise = noise * node_mask.unsqueeze(2).expand(noise.size())
-                
-                # Reshape the nodemask: 
-                node_mask = node_mask.view(batch_size*n_nodes, 1)
-                    
-                x_noisy = x + noise 
+
+                # Reshape the nodemask:
+                node_mask = node_mask.view(batch_size * n_nodes, 1)
+
+                x_noisy = x + noise
 
                 h = h.view(-1, n_feat)
                 x_noisy = x_noisy.view(-1, x_dim)
 
-                edges = get_adj_matrix(n_nodes=n_nodes, batch_size=batch_size, device=device) 
+                edges = get_adj_matrix(
+                    n_nodes=n_nodes, batch_size=batch_size, device=device
+                )
 
-                edges = [edge.to(device) for edge in edges]  # Convert each tensor in the list to GPU tensor
+                edges = [
+                    edge.to(device) for edge in edges
+                ]  # Convert each tensor in the list to GPU tensor
 
-                h_out, x_out = egnn(h.to(device), x_noisy.to(device), edges, node_mask.to(device), edge_mask=edge_mask.to(device))
+                h_out, x_out = egnn(
+                    h.to(device),
+                    x_noisy.to(device),
+                    edges,
+                    node_mask.to(device),
+                    edge_mask=edge_mask.to(device),
+                )
 
                 loss = loss_fn(x_out, noise.view(-1, x_dim).to(device))
 

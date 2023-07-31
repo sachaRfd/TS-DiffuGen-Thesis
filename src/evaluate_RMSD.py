@@ -3,7 +3,7 @@ Script for COV and MAT evaluation using RMSD between point clouds:
 ------------------------------------------------------------------
 
 1. Requires RDKIT optimisation algorithm to best align the two point clouds
-2. Calculate COVerage Score: How much of the generated samples are actually close to the true reference 
+2. Calculate COVerage Score: How much of the generated samples are actually close to the true reference   # noqa
 3. Calculate MATching Score: How good are the samples (Lowest RMSD)
 """
 
@@ -14,9 +14,9 @@ from rdkit.Chem import rdMolAlign as MA
 import pandas as pd
 
 
-def get_paths(sample_path): 
+def get_paths(sample_path):
     """
-    Load the files of molecules from a given sample path and organize them into true and generated samples.
+    Load the files of molecules from a given sample path and organize them into true and generated samples.  # noqa
         1. Iterate over one of the batch directories
         2. Iteraet over one of the molecule directories
         3. Get the number of samples we have
@@ -37,7 +37,7 @@ def get_paths(sample_path):
         AssertionError: If the specified sample_path does not exist.
     """
 
-    # Check that the path exists: 
+    # Check that the path exists:
     assert os.path.exists(sample_path)
 
     # Iterate over all the directories and load the files that end with .xyz
@@ -46,7 +46,6 @@ def get_paths(sample_path):
         dir_path = os.path.join(sample_path, directory)
         if os.path.isdir(dir_path):
             number_of_molecules.append(directory)
-
 
     # Load the files of molecules
     true_samples = []
@@ -58,18 +57,31 @@ def get_paths(sample_path):
             mol_dir_path = os.path.join(batch_dir_path, mol_dir)
             if os.path.isdir(mol_dir_path):
                 files = os.listdir(mol_dir_path)
-                true_samples.extend([os.path.join(mol_dir_path, file) for file in files if 'true_sample' in file])
-                generated_samples.append([os.path.join(mol_dir_path, file) for file in files if 'true' not in file])  # Because True prod and reactant have TRUE  in their names
+                true_samples.extend(
+                    [
+                        os.path.join(mol_dir_path, file)
+                        for file in files
+                        if "true_sample" in file
+                    ]
+                )
+                generated_samples.append(
+                    [
+                        os.path.join(mol_dir_path, file)
+                        for file in files
+                        if "true" not in file
+                    ]
+                )  # Because True prod and reactant have TRUE  in their names
 
     # Print The number of true samples and generated samples
-    print(f"\tThere are {len(true_samples)} samples and {len(generated_samples[0])} generated samples in total.\n\tThere are {int(len(generated_samples[0])/len(true_samples))} generated samples per true sample.\n")
+    print(
+        f"\tThere are {len(true_samples)} samples and {len(generated_samples[0])} generated samples in total.\n\tThere are {int(len(generated_samples[0])/len(true_samples))} generated samples per true sample.\n"  # noqa
+    )
 
     return true_samples, generated_samples
 
 
-
 def import_xyz_file(molecule_path, true_samples=True):
-    """
+    """# noqa
     Imports an XYZ file and loads it into an RDKit molecule object.
 
     Args:
@@ -85,10 +97,12 @@ def import_xyz_file(molecule_path, true_samples=True):
         If true_samples is True, the function reads the file, calculates the number of initial lines,
         and adds this count to the top of the file before loading the molecule (Needed for RDKit).
     """
-    if true_samples:    # True Samples are if the files were saved with previous function, which does not put number cout on the top of the file
-        with open(molecule_path, 'r') as xyz_file:
+    if (
+        true_samples
+    ):  # True Samples are if the files were saved with previous function, which does not put number cout on the top of the file  # noqa
+        with open(molecule_path, "r") as xyz_file:
             lines = xyz_file.readlines()
-    
+
         # Get the number of initial lines
         num_initial_lines = int(len(lines))
         lines = "".join([str(num_initial_lines), "\n\n"] + lines)
@@ -99,16 +113,14 @@ def import_xyz_file(molecule_path, true_samples=True):
             print("Error: Failed to load molecule files.")
             exit()
 
-
-    else: 
+    else:
         mol = Chem.rdmolfiles.MolFromXYZFile(molecule_path)
 
     return mol
 
 
-
 def create_lists(original_path):
-    """
+    """# noqa
     Create lists of true and generated molecules from the given original path.
 
     This function utilizes helper functions to extract true and generated molecule paths,
@@ -129,28 +141,27 @@ def create_lists(original_path):
         True molecules are assumed to have been saved with the number count on the top, whereas generated
         molecules are assumed to have been saved using the function that omits the number count on the top.
     """
-    # Get the paths 
+    # Get the paths
     true_paths, generated_paths = get_paths(original_path)
-    
-    # List for true samples: 
+
+    # List for true samples:
     true_molecules = []
     for true_path in true_paths:
-        true_molecules.append(import_xyz_file(true_path, true_samples=False))
+        true_molecules.append(import_xyz_file(true_path, true_samples=True))
 
-
-    # List for generated samples: 
+    # List for generated samples:
     generated_molecules = []
     for sample_mol in generated_paths:
         gen_mols = []
         for generated_path in sample_mol:
-            gen_mols.append(import_xyz_file(generated_path, true_samples=False))
+            gen_mols.append(import_xyz_file(generated_path, true_samples=True))
         generated_molecules.append(gen_mols)
 
     return true_molecules, generated_molecules
 
 
-def calculate_best_rmse(gen_mol, ref_mol, max_iters = 100_000):
-    """
+def calculate_best_rmse(gen_mol, ref_mol, max_iters=100_000):
+    """# noqa
     Calculate the Best RMSD (Root Mean Square Deviation) between two RDKit Molecule Objects.
 
     The function removes hydrogen atoms from both molecules before computing the RMSD.
@@ -170,16 +181,18 @@ def calculate_best_rmse(gen_mol, ref_mol, max_iters = 100_000):
         The function assumes that both 'gen_mol' and 'ref_mol' have already removed hydrogen atoms.
     """
 
-    # Remove the Hydrogens: 
+    # Remove the Hydrogens:
     gen_mol = Chem.rdmolops.RemoveAllHs(gen_mol)
     ref_mol = Chem.rdmolops.RemoveAllHs(ref_mol)
 
-    rmsd = MA.GetBestRMS(gen_mol, ref_mol, maxMatches=max_iters)  # Was previously 10_000
+    rmsd = MA.GetBestRMS(
+        gen_mol, ref_mol, maxMatches=max_iters
+    )  # Was previously 10_000
     return rmsd
 
 
 def create_rmse_table(true_mols, gen_mols, max_iters):
-    """
+    """# noqa
     Create a table of Best RMSD values between the reference and generated samples.
 
     This function calculates the Best RMSD (Root Mean Square Deviation) for each generated sample
@@ -208,12 +221,14 @@ def create_rmse_table(true_mols, gen_mols, max_iters):
             row.append(rmsd)
         rows.append(row)
 
-    df = pd.DataFrame(rows, columns=[f"Sample {i+1}" for i in range(len(rows[0]))])
+    df = pd.DataFrame(
+        rows, columns=[f"Sample {i+1}" for i in range(len(rows[0]))]
+    )  # noqa
     return df
-    
+
 
 def calc_cov_mat(rmse_matrix, cov_threshold=0.1):
-    """
+    """# noqa
     Calculate the COV and MAT scores of the inputted RMSE (Root Mean Square Error) matrix.
 
     COV (Coverage) Score:
@@ -240,25 +255,27 @@ def calc_cov_mat(rmse_matrix, cov_threshold=0.1):
     print(f"MAT-R Mean score is\t{mat_r_mean}")
     print(f"MAT-R Median score is\t{mat_r_median}")
 
-    # Next we calclate the COV score: 
+    # Next we calclate the COV score:
     cov_r = (rmse_matrix.min(axis=1) < cov_threshold).mean()
-    print(f"The COV-R score with a threshold of\t{cov_threshold}\tis\t{cov_r * 100} %.")
+    print(
+        f"The COV-R score with a threshold of\t{cov_threshold}\tis\t{cov_r * 100} %."  # noqa
+    )  # noqa
 
     return None
-
 
 
 if __name__ == "__main__":
     print("Running Evaluation Script\n")
 
-    sample_path = "src/Diffusion/Clean_lightning/TX1_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_False_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_2000_timesteps_64_batch_size_3000_epochs_False_Rem_Hydrogens/Samples"
+    sample_path = "src/Diffusion/Clean_lightning/BEST_MODEL_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_2000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Samples_3"  # noqa
 
     true_mols, gen_mols = create_lists(sample_path)
-    
-    # Get the number of iterations for the best alignmenet algorithm: 
-    max_iter = 100_000  #  gets quite slow very quickly
 
-    table = create_rmse_table(true_mols=true_mols, gen_mols=gen_mols, max_iters=max_iter)
+    # Get the number of iterations for the best alignmenet algorithm:
+    max_iter = 100_000  # gets quite slow very quickly
+
+    table = create_rmse_table(
+        true_mols=true_mols, gen_mols=gen_mols, max_iters=max_iter
+    )
     print(table)
-    calc_cov_mat(table, cov_threshold=0.2)
-     
+    calc_cov_mat(table, cov_threshold=0.1)

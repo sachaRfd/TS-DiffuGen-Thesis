@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
 
-
-"""
+""" # noqa
 How are we making the dataset class: 
 
 1. Check that the directory exists
@@ -38,12 +37,14 @@ Another step will be to add functionality that does not include the hydrogens.
 
 
 class QM90_TS(Dataset):
-
-    def __init__(self, directory="Dataset_W93/data/Clean_Geometries/",
-                 remove_hydrogens=False,
-                 graph=False,
-                 plot_distribution=False, 
-                 include_context=False):
+    def __init__(
+        self,
+        directory="Dataset_W93/data/Clean_Geometries/",
+        remove_hydrogens=False,
+        graph=False,
+        plot_distribution=False,
+        include_context=False,
+    ):
         super().__init__()
 
         # First we can read all the data from the files:
@@ -51,56 +52,66 @@ class QM90_TS(Dataset):
         self.directory = directory
         self.context = include_context
         self.count = 0
-        
+
         # Dictionaries
         self.atom_dict = {}
         self.ohe_dict = {}
-        self.nuclear_charges = {"H":1,"C":6, "N":7,"O":8, "None":0} # Dictionary containing the nuclear charges of the atoms
-        self.van_der_waals_radius = {"H":1.20,"C":1.70, "N":1.55,"O":1.52, "None":0} # Dictionary containing the van_der_waals_radius of the atoms in Argstroms
+        self.nuclear_charges = {
+            "H": 1,
+            "C": 6,
+            "N": 7,
+            "O": 8,
+            "None": 0,
+        }  # Dictionary containing the nuclear charges of the atoms
+        self.van_der_waals_radius = {
+            "H": 1.20,
+            "C": 1.70,
+            "N": 1.55,
+            "O": 1.52,
+            "None": 0,
+        }  # Dictionary containing the van_der_waals_radius of the atoms in Argstroms
 
         self.data = []
         self.reactant = []
         self.product = []
         self.transition_states = []
 
-        # Node masks: 
+        # Node masks:
         self.node_mask = []
 
-
-        # Run Assert for path:        
+        # Run Assert for path:
         assert os.path.exists(self.directory)
 
+        # Run the Setup:
+        self.count_data()
 
-        # Run the Setup: 
-        self.count_data() 
-              
         # Append the reaction data to tbe data-variale
         for reaction_number in range(self.count):
             self.extract_data(reaction_number)
-        
 
-        # Count the atoms: 
+        # Count the atoms:
         self.atom_count()
 
-        # Print the atom count: 
-        print(f"\nThe dataset includes {self.count} reactions and the following atom count:\n")
+        # Print the atom count:
+        print(
+            f"\nThe dataset includes {self.count} reactions and the following atom count:\n"
+        )
         for atom, count in self.atom_dict.items():
             print(f"\t{atom}: {count}")
         print()
 
-
         if plot_distribution:
-            # Plot the size distribution of the molecules - Before we One hot encode: 
+            # Plot the size distribution of the molecules - Before we One hot encode:
             self.plot_molecule_size_distribution()
 
-        # One Hot Encode the atoms: 
+        # One Hot Encode the atoms:
         self.one_hot_encode()
-  
+
         # Assert that the shapes are correct:
         assert self.reactant.shape == self.product.shape == self.transition_states.shape
 
         if graph:
-            # Create the graphs: 
+            # Create the graphs:
             print("Creating Graphs")
             self.create_graph()
         else:
@@ -110,22 +121,23 @@ class QM90_TS(Dataset):
         print("\nFinished creating the dataset. ")
 
     def count_data(self):
-        # See how many sub-folders are present: 
+        # See how many sub-folders are present:
         for folder in os.listdir(self.directory):
             if folder.startswith("Reaction_"):
                 self.count += 1
-  
-    
+
     def extract_data(self, reaction_number):
-        # Get the Full path: 
+        # Get the Full path:
         path = os.path.join(self.directory, f"Reaction_{reaction_number}")
         assert os.path.exists(path)  # Assert the path Exists
 
         # Check that in the path there are the three files:
-        assert len(os.listdir(path)) == 4, "The folder is missing files."  # 4 FIles as we have the reactant images also in the directory
+        assert (
+            len(os.listdir(path)) == 4
+        ), "The folder is missing files."  # 4 FIles as we have the reactant images also in the directory
 
         # Now we can extract the Reactant, Product, TS info:
-        for file in os.listdir(path):#
+        for file in os.listdir(path):  #
             if file.startswith("Reactant"):
                 # Append to Reactant Matrix:
                 reactant_matrix = []
@@ -133,10 +145,10 @@ class QM90_TS(Dataset):
                     lines = read_file.readlines()
                     for line in lines:
                         if self.remove_hydrogen:
-                            # Check that the line is not Oxygens: 
+                            # Check that the line is not Oxygens:
                             if line[0] != "H":
                                 reactant_matrix.append(line.split())
-                        else: 
+                        else:
                             reactant_matrix.append(line.split())
                 self.reactant.append(reactant_matrix)
 
@@ -149,7 +161,7 @@ class QM90_TS(Dataset):
                         if self.remove_hydrogen:
                             if line[0] != "H":
                                 product_matrix.append(line.split())
-                        else:     
+                        else:
                             product_matrix.append(line.split())
                 self.product.append(product_matrix)
 
@@ -158,7 +170,7 @@ class QM90_TS(Dataset):
                 ts_matrix = []
                 with open(os.path.join(path, file), "r") as read_file:
                     lines = read_file.readlines()
-                    for line in lines: 
+                    for line in lines:
                         if self.remove_hydrogen:
                             if line[0] != "H":
                                 ts_matrix.append(line.split())
@@ -166,21 +178,20 @@ class QM90_TS(Dataset):
                             ts_matrix.append(line.split())
                 self.transition_states.append(ts_matrix)
 
-
     def atom_count(self):
-        # Iterate over all the values in the lists to find if the different molecules: 
+        # Iterate over all the values in the lists to find if the different molecules:
         for mol in self.reactant:
-            for atom in mol: 
+            for atom in mol:
                 if atom[0] not in self.atom_dict:
                     self.atom_dict[atom[0]] = 1
                 else:
-                    self.atom_dict[atom[0]] +=1
-
-
+                    self.atom_dict[atom[0]] += 1
 
     def plot_molecule_size_distribution(self):
         # Count the size of each molecule
-        molecule_sizes = [len(mol) for mol in self.reactant + self.product + self.transition_states]
+        molecule_sizes = [
+            len(mol) for mol in self.reactant + self.product + self.transition_states
+        ]
 
         # Create a dictionary to store the count of each molecule size
         molecule_size_count = {}
@@ -200,9 +211,11 @@ class QM90_TS(Dataset):
         # Plot the bar chart
         plt.figure(figsize=(10, 6))
         plt.bar(x, y)
-        plt.xlabel('Molecule Size', fontsize=15)  # Increase font size for x-axis label
-        plt.ylabel('Count', fontsize=15)  # Increase font size for y-axis label
-        plt.title('Distribution of Molecule Sizes', fontsize=16)  # Increase font size for title
+        plt.xlabel("Molecule Size", fontsize=15)  # Increase font size for x-axis label
+        plt.ylabel("Count", fontsize=15)  # Increase font size for y-axis label
+        plt.title(
+            "Distribution of Molecule Sizes", fontsize=16
+        )  # Increase font size for title
         plt.xticks(rotation=90)
         plt.tight_layout()
         plt.show()
@@ -212,9 +225,11 @@ class QM90_TS(Dataset):
 
         for index, atom in enumerate(self.atom_dict):
             ohe_vector = [0] * num_of_atoms
-            ohe_vector[index] = 1  # Set the position corresponding to the atom index to 1
+            ohe_vector[
+                index
+            ] = 1  # Set the position corresponding to the atom index to 1
             self.ohe_dict[atom] = ohe_vector
-        
+
         print(f"\nThe Atom Encoding is the following:\n")
         for atom, count in self.ohe_dict.items():
             print(f"\t{atom}: {count}")
@@ -227,42 +242,60 @@ class QM90_TS(Dataset):
         self.replace_atom_types_with_ohe_vectors(self.transition_states)
 
         # Convert everything in the self.reactants, self.products, and self.transition_states to floats:
-        self.reactant = [[[float(value) for value in atom] for atom in mol] for mol in self.reactant]
-        self.product = [[[float(value) for value in atom] for atom in mol] for mol in self.product]
-        self.transition_states = [[[float(value) for value in atom] for atom in mol] for mol in self.transition_states]
+        self.reactant = [
+            [[float(value) for value in atom] for atom in mol] for mol in self.reactant
+        ]
+        self.product = [
+            [[float(value) for value in atom] for atom in mol] for mol in self.product
+        ]
+        self.transition_states = [
+            [[float(value) for value in atom] for atom in mol]
+            for mol in self.transition_states
+        ]
 
         # Calculate the center of gravity and remove it
         self.delete_centre_gravity()  # This has been tested in the testing images on local computer --> WORKS
-
 
         # Convert everything in the self.reactant, self.product, and self.transition_states back to lists
         self.reactant = [mol.tolist() for mol in self.reactant]
         self.product = [mol.tolist() for mol in self.product]
         self.transition_states = [mol.tolist() for mol in self.transition_states]
 
-
         # Check the maximum length among all nested lists for padding
-        max_length = max(len(mol) for mol in self.reactant + self.product + self.transition_states)
+        max_length = max(
+            len(mol) for mol in self.reactant + self.product + self.transition_states
+        )
 
         # Pad the nested lists to have the same length
-        padded_reactant = [mol + [[0.0] * len(mol[0])] * (max_length - len(mol)) for mol in self.reactant]
-        padded_product = [mol + [[0.0] * len(mol[0])] * (max_length - len(mol)) for mol in self.product]
-        padded_transition_states = [mol + [[0.0] * len(mol[0])] * (max_length - len(mol)) for mol in self.transition_states]
+        padded_reactant = [
+            mol + [[0.0] * len(mol[0])] * (max_length - len(mol))
+            for mol in self.reactant
+        ]
+        padded_product = [
+            mol + [[0.0] * len(mol[0])] * (max_length - len(mol))
+            for mol in self.product
+        ]
+        padded_transition_states = [
+            mol + [[0.0] * len(mol[0])] * (max_length - len(mol))
+            for mol in self.transition_states
+        ]
 
         # Make a copy of the unpadded chemicals
         self.unpadded_chemical = self.reactant.copy()
 
         # Create the node mask:
-        self.node_mask = torch.tensor([[1.0] * len(mol) + [0.0] * (max_length - len(mol)) for mol in self.reactant])
-
+        self.node_mask = torch.tensor(
+            [
+                [1.0] * len(mol) + [0.0] * (max_length - len(mol))
+                for mol in self.reactant
+            ]
+        )
 
         # Assign the padded values to self.reactant, self.product, and self.transition_states
         self.reactant = torch.tensor(padded_reactant)
         self.product = torch.tensor(padded_product)
         self.transition_states = torch.tensor(padded_transition_states)
-    
-    
-    
+
     def replace_atom_types_with_ohe_vectors(self, molecule_list):
         for mol in molecule_list:
             for atom in mol:
@@ -270,14 +303,19 @@ class QM90_TS(Dataset):
                 if atom_type in self.ohe_dict:
                     ohe_vector = self.ohe_dict[atom_type]
                     atom[0:1] = ohe_vector
-    
-    
+
     def delete_centre_gravity(self):
         # Calculate the center of gravity for each molecule
         for index in range(self.count):
-            reactant_coords = np.array(self.reactant[index])[:, len(self.atom_dict):].astype(float)
-            product_coords = np.array(self.product[index])[:, len(self.atom_dict):].astype(float)
-            ts_coords = np.array(self.transition_states[index])[:, len(self.atom_dict):].astype(float)
+            reactant_coords = np.array(self.reactant[index])[
+                :, len(self.atom_dict) :
+            ].astype(float)
+            product_coords = np.array(self.product[index])[
+                :, len(self.atom_dict) :
+            ].astype(float)
+            ts_coords = np.array(self.transition_states[index])[
+                :, len(self.atom_dict) :
+            ].astype(float)
 
             # Calculate the center of gravity
             reactant_center = np.mean(reactant_coords, axis=0)
@@ -286,114 +324,146 @@ class QM90_TS(Dataset):
 
             # Remove the center of gravity from each molecule
             self.reactant[index] = np.array(self.reactant[index])
-            self.reactant[index][:, len(self.atom_dict):] = reactant_coords - reactant_center
+            self.reactant[index][:, len(self.atom_dict) :] = (
+                reactant_coords - reactant_center
+            )
 
             self.product[index] = np.array(self.product[index])
-            self.product[index][:, len(self.atom_dict):] = product_coords - product_center
+            self.product[index][:, len(self.atom_dict) :] = (
+                product_coords - product_center
+            )
 
             self.transition_states[index] = np.array(self.transition_states[index])
-            self.transition_states[index][:, len(self.atom_dict):] = ts_coords - ts_center
+            self.transition_states[index][:, len(self.atom_dict) :] = (
+                ts_coords - ts_center
+            )
 
     def create_graph(self):
         # We can append it to the self.data tensor of graphs, and make the positions the TS, we also make it fully connected
         for index in range(self.count):
             # Create Fully connected graph
             num_nodes = self.reactant[index].shape[0]
-            edge_index = erdos_renyi_graph(num_nodes,   edge_prob=1.0)
-            
+            edge_index = erdos_renyi_graph(num_nodes, edge_prob=1.0)
+
             graph = Data(
-                x=torch.cat([self.reactant[index, :, :], self.product[index, :, -3:], self.transition_states[index, :, -3:]], dim=1),
+                x=torch.cat(
+                    [
+                        self.reactant[index, :, :],
+                        self.product[index, :, -3:],
+                        self.transition_states[index, :, -3:],
+                    ],
+                    dim=1,
+                ),
                 pos=self.transition_states[index, :, -3:],
-                edge_index=edge_index
+                edge_index=edge_index,
             )
             self.data.append(graph)
-    
+
     def get_keys_from_value(self, search_value):
         result = [key for key, value in self.ohe_dict.items() if value == search_value]
-        return result if result else ["None"]   # Make it return none if it comes upon the masked atoms
-    
+        return (
+            result if result else ["None"]
+        )  # Make it return none if it comes upon the masked atoms
+
     def create_data_array(self):
-        # Check if we want to add context to the data: 
-        if self.context: 
+        # Check if we want to add context to the data:
+        if self.context:
             # Add this to utils file later
             print("Adding the context to the dataset")
             print("Including nuclear charges")
             # This is to just return data as simple matrix and not graph
             for index in range(self.count):
-                # Let's get the nuclear charge of the atom from the OHE: 
+                # Let's get the nuclear charge of the atom from the OHE:
                 ohes = self.reactant[index, :, :-3]
 
-
-                # Get the atomic features: 
+                # Get the atomic features:
                 atomic_feature_vector = ohes
 
-                # # Get the nuclear charges of all the atoms: 
+                # # Get the nuclear charges of all the atoms:
                 # atom_types = [self.get_keys_from_value(atom.tolist()) for atom in atomic_feature_vector]    # Get the atom type
                 # nuclear_charges = torch.tensor([[self.nuclear_charges[atom_type[0]]] for atom_type in atom_types])  # Get the nuclear charge from the atom type
 
-
-                # # concatenate the OHE, the Nuclear charge, and then the coordinates of the reactant/product/TS               
+                # # concatenate the OHE, the Nuclear charge, and then the coordinates of the reactant/product/TS
                 # x=torch.cat([ohes, nuclear_charges, self.reactant[index, :, -3:], self.product[index, :, -3:], self.transition_states[index, :, -3:]], dim=1)
                 # self.data.append(x)
 
-                # Get the Van Der Waals RADII of all the atoms: 
-                atom_types = [self.get_keys_from_value(atom.tolist()) for atom in atomic_feature_vector]    # Get the atom type
-                van_der_waals = torch.tensor([[self.van_der_waals_radius[atom_type[0]]] for atom_type in atom_types])  # Get the nuclear charge from the atom type
+                # Get the Van Der Waals RADII of all the atoms:
+                atom_types = [
+                    self.get_keys_from_value(atom.tolist())
+                    for atom in atomic_feature_vector
+                ]  # Get the atom type
+                van_der_waals = torch.tensor(
+                    [
+                        [self.van_der_waals_radius[atom_type[0]]]
+                        for atom_type in atom_types
+                    ]
+                )  # Get the nuclear charge from the atom type
 
-
-                # concatenate the OHE, the Nuclear charge, and then the coordinates of the reactant/product/TS               
-                x=torch.cat([ohes, van_der_waals, self.reactant[index, :, -3:], self.product[index, :, -3:], self.transition_states[index, :, -3:]], dim=1)
+                # concatenate the OHE, the Nuclear charge, and then the coordinates of the reactant/product/TS
+                x = torch.cat(
+                    [
+                        ohes,
+                        van_der_waals,
+                        self.reactant[index, :, -3:],
+                        self.product[index, :, -3:],
+                        self.transition_states[index, :, -3:],
+                    ],
+                    dim=1,
+                )
                 self.data.append(x)
 
-        else: 
+        else:
             print("Not including Context information")
 
             # This is to just return data as simple matrix and not graph
             for index in range(self.count):
                 # Only take the last 3 parts of the product and transition states as they all contain the OHE
-                x=torch.cat([self.reactant[index, :, :], self.product[index, :, -3:], self.transition_states[index, :, -3:]], dim=1)
+                x = torch.cat(
+                    [
+                        self.reactant[index, :, :],
+                        self.product[index, :, -3:],
+                        self.transition_states[index, :, -3:],
+                    ],
+                    dim=1,
+                )
                 self.data.append(x)
 
-
-    
     def get(self, idx):
         # Remove the mean --> So that we have translation invariant data
         return self.data[idx], self.node_mask[idx]
-
 
     def len(self):
         return len(self.data)
 
 
-
 if __name__ == "__main__":
     remove_hydrogens = False
-    dataset = QM90_TS(directory="Dataset_W93/data/Clean_Geometries/",
-                      remove_hydrogens=remove_hydrogens,
-                      graph=False,
-                      plot_distribution=False,
-                      include_context=True)
-
+    dataset = QM90_TS(
+        directory="Dataset_W93/data/Clean_Geometries/",
+        remove_hydrogens=remove_hydrogens,
+        graph=False,
+        plot_distribution=False,
+        include_context=True,
+    )
 
     # In all papers they use 8:1:1 ratio
-    train_dataset, test_dataset = train_test_split(dataset, test_size=0.2, random_state=42)
-    val_dataset, test_dataset = train_test_split(test_dataset, test_size=0.5, random_state=42)
+    train_dataset, test_dataset = train_test_split(
+        dataset, test_size=0.2, random_state=42
+    )
+    val_dataset, test_dataset = train_test_split(
+        test_dataset, test_size=0.5, random_state=42
+    )
 
     batch_size = 20
-    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
+    train_loader = DataLoader(
+        dataset=train_dataset, batch_size=batch_size, shuffle=True
+    )
 
     print(next(iter(train_loader))[0][0][0].dtype)
-
-
-
-
-
-
 
     # sample, node_masks = next(iter(train_loader))
     # print(sample[10])
     # print(node_masks[1])
-
 
     # # Calculate the mean along the second dimension (molecule by molecule)
     # mean_xyz = torch.mean(sample[:, :, 4:7], dim=1, keepdim=True)
@@ -402,7 +472,3 @@ if __name__ == "__main__":
     # for i in range(batch_size):
     #     print(node_masks[i])
     #     print(f"Molecule {i+1}: Mean (x, y, z) = {mean_xyz[i]}")
-
-
-
-
