@@ -8,7 +8,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-
 def plot_data(timesteps, data, label, save_filename):
     plt.plot(timesteps, data, label=label)
     plt.xlabel("Timesteps")
@@ -17,6 +16,7 @@ def plot_data(timesteps, data, label, save_filename):
     plt.legend()
     plt.savefig(save_filename)
     plt.show()
+
 
 if __name__ == "__main__":
     folders = ["cosine", "sigmoid_2", "sigmoid_5"]

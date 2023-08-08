@@ -12,7 +12,7 @@ import os
 import numpy as np
 import torch
 
-from Dataset_W93.dataset_class import QM90_TS
+from data.Dataset_W93.dataset_class import QM90_TS
 import src.Diffusion.utils as diffusion_utils
 from src.Diffusion.saving_sampling_functions import return_xyz, write_xyz_file
 

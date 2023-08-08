@@ -39,7 +39,7 @@ Another step will be to add functionality that does not include the hydrogens.
 class QM90_TS(Dataset):
     def __init__(
         self,
-        directory="Dataset_W93/data/Clean_Geometries/",
+        directory="data/Dataset_W93/data/Clean_Geometries/",
         remove_hydrogens=False,
         graph=False,
         plot_distribution=False,

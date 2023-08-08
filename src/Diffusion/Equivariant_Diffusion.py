@@ -24,8 +24,8 @@ from torch.nn import MSELoss
 import wandb
 from sklearn.model_selection import train_test_split
 
-from Dataset_W93.dataset_class import QM90_TS
-from src.EGNN import model_dynamics_with_mask
+from data.Dataset_W93.dataset_class import QM90_TS
+from src.EGNN import dynamics
 from Diffusion.noising import PredefinedNoiseSchedule
 
 from torch.utils.data import DataLoader
@@ -51,7 +51,7 @@ class DiffusionModel(torch.nn.Module):
 
     def __init__(
         self,
-        dynamics: model_dynamics_with_mask.EGNN_dynamics_QM9,
+        dynamics: dynamics.EGNN_dynamics_QM9,
         in_node_nf: int,
         n_dims: int,
         device="cpu",
@@ -565,7 +565,7 @@ if __name__ == "__main__":
     print("running script")
 
     # Setup the device:
-    device = model_dynamics_with_mask.setup_device()
+    device = dynamics.setup_device()
 
     remove_hydrogens = False
     include_context = True
@@ -602,7 +602,7 @@ if __name__ == "__main__":
     wandb.config.hidden_node_features = hidden_features
     wandb.config.number_of_layers = n_layers
 
-    denoising_model = model_dynamics_with_mask.EGNN_dynamics_QM9(
+    denoising_model = dynamics.EGNN_dynamics_QM9(
         in_node_nf=in_node_nf,
         context_node_nf=context_nf,
         hidden_nf=hidden_features,

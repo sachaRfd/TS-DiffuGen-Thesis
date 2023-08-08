@@ -1,12 +1,12 @@
 import torch
 import numpy as np
 
-from Dataset_W93.dataset_class import *
+from data.Dataset_W93.dataset_class import QM90_TS
 from torch_geometric.loader import DataLoader
 
 
 def sum_except_batch(x):
-    """
+    """# noqa
     Sums the elements of each tensor in the input `x`, except the batch dimension.
 
     Args:
@@ -20,7 +20,7 @@ def sum_except_batch(x):
 
 
 def remove_mean_including_reactants_and_products(x):
-    """
+    """# noqa
     Subtracts the mean of each row (excluding the One-Hot-Encoded atom types) from the corresponding row.
 
     Args:
@@ -82,7 +82,7 @@ def assert_mean_zero(x):
 
 def remove_mean_with_mask(x, node_mask):
     masked_max_abs_value = (x * (1 - node_mask)).abs().sum().item()
-    assert masked_max_abs_value < 1e-5, f"Error {masked_max_abs_value} too high"
+    assert masked_max_abs_value < 1e-5, f"Error {masked_max_abs_value} too high"  # noqa
     N = node_mask.sum(1, keepdims=True)
 
     mean = torch.sum(x, dim=1, keepdim=True) / N
@@ -120,7 +120,7 @@ def sample_center_gravity_zero_gaussian_with_mask(size, device, node_mask):
 
 
 def sample_center_gravity_zero_gaussian(size, device):
-    """
+    """# noqa
     Samples data from a zero-mean Gaussian distribution centered at the origin and projects it onto the space of transition states (TS).
 
     Args:
@@ -147,7 +147,7 @@ def sample_center_gravity_zero_gaussian(size, device):
 
 
 def standard_gaussian_log_likelihood(x):
-    """
+    """# noqa
     Computes the log-likelihood of a standard Gaussian distribution for a given input tensor.
 
     No Euclidian Distances are accounted for here unlike the centred-gravity function above.
@@ -166,7 +166,7 @@ def standard_gaussian_log_likelihood(x):
 
 
 def sample_gaussian(size, device):
-    """
+    """# noqa
     Standard Gaussian Sampling - Whithout the removal of the centre of gravity --> NOT E(3) Equivariant.
     """
     assert len(size) == 3
@@ -178,7 +178,7 @@ def sample_gaussian(size, device):
 
 # Rotation data augmntation
 def random_rotation(x, h):
-    """
+    """# noqa
 
     Adapted from: https://github.com/ehoogeboom/e3_diffusion_for_molecules/blob/main/utils.py
 
@@ -275,7 +275,7 @@ if __name__ == "__main__":
     print("Running Tests")
 
     # Let's check that all the above functions work as intended here !!!
-    dataset = QM90_TS(directory="Dataset/data/Clean_Geometries/")
+    dataset = QM90_TS()
     train_loader = DataLoader(dataset=dataset, batch_size=64, shuffle=True)
 
     example_sample = next(iter(train_loader))

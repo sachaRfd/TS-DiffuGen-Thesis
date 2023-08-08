@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 """
-
+  # noqa
 Code from: https://github.com/ehoogeboom/e3_diffusion_for_molecules/blob/fce07d701a2d2340f3522df588832c2c0f7e044a/equivariant_diffusion/utils.py
 
 """
@@ -49,7 +49,7 @@ def remove_mean(x):
 
 def remove_mean_with_mask(x, node_mask):
     masked_max_abs_value = (x * (1 - node_mask)).abs().sum().item()
-    assert masked_max_abs_value < 1e-5, f"Error {masked_max_abs_value} too high"
+    assert masked_max_abs_value < 1e-5, f"Error {masked_max_abs_value} too high"  # noqa
     N = node_mask.sum(1, keepdims=True)
 
     mean = torch.sum(x, dim=1, keepdim=True) / N

@@ -4,9 +4,9 @@ This is the script to evaluate our diffusion model using python Lightning
 """
 import pytorch_lightning as pl
 import torch
-from EGNN import model_dynamics_with_mask
+from src.EGNN import dynamics
 
-from Diff_lightning import LitDiffusionModel
+from src.Diff_train import LitDiffusionModel
 
 
 def test_model(model, logger):
@@ -19,16 +19,19 @@ def test_model(model, logger):
 
 if __name__ == "__main__":
     # Hyper-parameters:
-    device = model_dynamics_with_mask.setup_device()
+    device = dynamics.setup_device()
 
-    dataset_to_use = "W93"
+    dataset_to_use = "RGD1"
 
     # Setup Hyper-paremetres:
-    learning_rate_schedule = False
+    learning_rate_schedule = True
     random_rotations = False  # Part of Data Augmentation
     augment_train_set = False  # Also part of Data Augmentation
     remove_hydrogens = False
     include_context = False
+
+    # If we do not include the product in the diffusoin step:
+    no_product = False
 
     if remove_hydrogens:
         in_node_nf = 9 + 1  # To account for time and 1 less OHE
@@ -38,12 +41,15 @@ if __name__ == "__main__":
     if include_context:
         in_node_nf += 1  # Add one for the size of context --> For now we just have the Nuclear Charge # noqa
 
+    if no_product:
+        in_node_nf -= 3
+
     out_node = 3
     context_nf = 0
     n_dims = 3
     noise_schedule = "sigmoid_2"
     loss_type = "l2"
-    timesteps = 500
+    timesteps = 1_000
     batch_size = 64
     n_layers = 8
     hidden_features = 64
@@ -51,7 +57,7 @@ if __name__ == "__main__":
     epochs = 1000
     test_sampling_number = 10
     save_samples = True
-    save_path = "src/Diffusion/Clean_lightning/W93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_500_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Samples_3/"  # noqa
+    save_path = "src/Diffusion/RGD1_dataset_weights/False_no_productRGD1_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_False_augment_train_set_8_layers_64_hiddenfeatures_0.001_lr_sigmoid_2_1000_timesteps_256_batch_size_100_epochs_False_Rem_Hydrogens/Samples/"  # noqa
 
     # Create an instance of your Lightning model
     lit_diff_model = LitDiffusionModel(
@@ -74,80 +80,13 @@ if __name__ == "__main__":
         augment_train_set=augment_train_set,
         include_context=include_context,
         learning_rate_schedule=learning_rate_schedule,
+        no_product=no_product,
     )
 
     print("Model parameters device:", next(lit_diff_model.parameters()).device)
 
     # Load the saved model state dictionary
-    model_path = "src/Diffusion/Clean_lightning/W93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_500_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Weights/weights.pth"  # noqa
-
-    # Load the state dict into the model:
-    lit_diff_model.load_state_dict(torch.load(model_path))
-
-    # Create a trainer instance for testing
-    test_model(lit_diff_model, logger=None)
-
-    # Second SAMPLING
-
-    dataset_to_use = "W93"
-
-    # Setup Hyper-paremetres:
-    learning_rate_schedule = False
-    random_rotations = False  # Part of Data Augmentation
-    augment_train_set = False  # Also part of Data Augmentation
-    remove_hydrogens = False
-    include_context = False
-
-    if remove_hydrogens:
-        in_node_nf = 9 + 1  # To account for time and 1 less OHE
-    else:
-        in_node_nf = 10 + 1  # To account for time
-
-    if include_context:
-        in_node_nf += 1  # Add one for the size of context --> For now we just have the Nuclear Charge# noqa
-
-    out_node = 3
-    context_nf = 0
-    n_dims = 3
-    noise_schedule = "sigmoid_2"
-    loss_type = "l2"
-    timesteps = 500
-    batch_size = 64
-    n_layers = 8
-    hidden_features = 64
-    lr = 1e-4
-    epochs = 1000
-    test_sampling_number = 10
-    save_samples = True
-    save_path = "src/Diffusion/Clean_lightning/W93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_500_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Samples_2/"  # noqa
-
-    # Create an instance of your Lightning model
-    lit_diff_model = LitDiffusionModel(
-        dataset_to_use,
-        in_node_nf,
-        context_nf,
-        hidden_features,
-        out_node,
-        n_dims,
-        n_layers,
-        device,
-        lr,
-        remove_hydrogens,
-        test_sampling_number,
-        save_samples,
-        save_path,
-        timesteps,
-        noise_schedule,
-        random_rotations=random_rotations,
-        augment_train_set=augment_train_set,
-        include_context=include_context,
-        learning_rate_schedule=learning_rate_schedule,
-    )
-
-    print("Model parameters device:", next(lit_diff_model.parameters()).device)
-
-    # Load the saved model state dictionary
-    model_path = "src/Diffusion/Clean_lightning/W93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_500_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Weights/weights.pth"  # noqa
+    model_path = "src/Diffusion/RGD1_dataset_weights/False_no_productRGD1_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_False_augment_train_set_8_layers_64_hiddenfeatures_0.001_lr_sigmoid_2_1000_timesteps_256_batch_size_100_epochs_False_Rem_Hydrogens/Weights/weights.pth"  # noqa
 
     # Load the state dict into the model:
     lit_diff_model.load_state_dict(torch.load(model_path))

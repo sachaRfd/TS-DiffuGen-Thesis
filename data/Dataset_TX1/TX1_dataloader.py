@@ -1,5 +1,5 @@
 """
-
+# noqa
 Adapted from https://gitlab.com/matschreiner/Transition1x/-/blob/main/transition1x/dataloader.py?ref_type=heads
 
 """
@@ -18,10 +18,12 @@ REFERENCE_ENERGIES = {
     9: -2712.8213146878606,
 }
 
-ohe_to_atomic_number = {1: [0, 0, 0, 1],
-                        6: [1, 0, 0, 0],
-                        7: [0, 1, 0, 0],
-                        8: [0, 0, 1, 0]}
+ohe_to_atomic_number = {
+    1: [0, 0, 0, 1],
+    6: [1, 0, 0, 0],
+    7: [0, 1, 0, 0],
+    8: [0, 0, 1, 0],
+}
 
 
 def get_molecular_reference_energy(atomic_numbers):
@@ -33,7 +35,7 @@ def get_molecular_reference_energy(atomic_numbers):
 
 
 def generator(formula, rxn, grp):
-    """ Iterates through a h5 group """
+    """Iterates through a h5 group"""
 
     energies = grp["wB97x_6-31G(d).energy"]
     forces = grp["wB97x_6-31G(d).forces"]
@@ -57,7 +59,7 @@ def generator(formula, rxn, grp):
 
 
 class Dataloader:
-    """
+    """# noqa
     Can iterate through h5 data set for paper ####
 
     hdf5_file: path to data
@@ -84,12 +86,14 @@ class Dataloader:
 
             for formula, grp in split.items():
                 for rxn, subgrp in grp.items():
-                    reactant = next(generator(formula, rxn, subgrp["reactant"]))
+                    reactant = next(generator(formula, rxn, subgrp["reactant"]))  # noqa
                     product = next(generator(formula, rxn, subgrp["product"]))
 
                     if self.only_final:
-                        transition_state = next(generator(formula, rxn, subgrp["transition_state"]))
-                        
+                        transition_state = next(
+                            generator(formula, rxn, subgrp["transition_state"])
+                        )
+
                         yield {
                             "rxn": rxn,
                             "reactant": reactant,
@@ -106,34 +110,35 @@ class Dataloader:
 if __name__ == "__main__":
     print("Running script")
 
-    dataloader = Dataloader("Dataset_TX1/Transition1x.h5", "test", only_final=True)
+    dataloader = Dataloader(
+        "Dataset_TX1/Transition1x.h5", "test", only_final=True
+    )  # noqa
     test_set = []
     test_node_masks = []
-    max_length = 23 # For padding purposes (when hydrogens are present) 
+    max_length = 23  # For padding purposes (when hydrogens are present)
     for molecule in dataloader:
-        # Atom type is in atomic number, lets convert it back to a OHE representation: 
+        # Atom type is in atomic number, lets convert it back to a OHE representation:# noqa
         atom_type = molecule["transition_state"]["atomic_numbers"]
-        
 
-        # Get the OHE Representations: 
+        # Get the OHE Representations:
         ohe = []
-        for atom in atom_type: 
+        for atom in atom_type:
             ohe.append(ohe_to_atomic_number.get(atom))
 
-
-        # Get the coordinates: 
+        # Get the coordinates:
         ts_coordinates = molecule["transition_state"]["positions"]
         r_coordinates = molecule["reactant"]["positions"]
         p_coordinates = molecule["product"]["positions"]
-        
-        # Now we can setup a molecule list that will be fed through a downstream sampling model:
+
+        # Now we can setup a molecule list that will be fed through a downstream sampling model:# noqa
         mol = []
-        for ohe_atom, reactant, product, ts in zip(ohe, r_coordinates, p_coordinates, ts_coordinates):
+        for ohe_atom, reactant, product, ts in zip(
+            ohe, r_coordinates, p_coordinates, ts_coordinates
+        ):
             combined_values = [*ohe_atom, *reactant, *product, *ts]
             mol.append(combined_values)
-            
 
-        # Check that the mean of each variable is 0: 
+        # Check that the mean of each variable is 0:
         mol = torch.tensor(mol)
 
         # Remove the mean from the reactants, products and transition states:
@@ -141,30 +146,31 @@ if __name__ == "__main__":
         mol[:, 7:10] -= mol[:, 7:10].mean(axis=0)
         mol[:, 10:13] -= mol[:, 10:13].mean(axis=0)
 
-
-        # Check that the mean of each variable is 0: 
+        # Check that the mean of each variable is 0:
         assert np.allclose(mol[:, 4:7].mean(axis=0), 0, atol=1e-5)
         assert np.allclose(mol[:, 7:10].mean(axis=0), 0, atol=1e-5)
         assert np.allclose(mol[:, 10:13].mean(axis=0), 0, atol=1e-5)
 
         # Create the padding:
-        padding = torch.tensor([[0.0] * mol[0].shape[0]] * (max_length - mol.shape[0]))
-        
-        # Concatenate the padding to the original molecule tensor: 
+        padding = torch.tensor(
+            [[0.0] * mol[0].shape[0]] * (max_length - mol.shape[0])
+        )  # noqa
+
+        # Concatenate the padding to the original molecule tensor:
         padded_mol = torch.concatenate((mol, padding), dim=0)
         # print(padded_mol)
         # exit()
 
-        # Now create the node mask: 
-        node_mask = torch.tensor([1.0] * mol[0].shape[0] + [0.0] * (max_length - mol.shape[0]))
+        # Now create the node mask:
+        node_mask = torch.tensor(
+            [1.0] * mol[0].shape[0] + [0.0] * (max_length - mol.shape[0])
+        )
         # print(node_mask)
-        
-        # Append them to dataset: 
+
+        # Append them to dataset:
         test_node_masks.append(node_mask)
         test_set.append(padded_mol)
 
-    print(f"Length of the test set is {len(test_set)}")    
+    print(f"Length of the test set is {len(test_set)}")
     # print(test_set)
     # print(test_node_masks)
-    
-
