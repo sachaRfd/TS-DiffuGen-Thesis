@@ -1,11 +1,8 @@
 import os
 import numpy as np
 import torch
-from torch.utils.data import random_split
 from torch_geometric.data import Dataset, Data
-from torch.utils.data.dataset import Subset
 from torch_geometric.utils import erdos_renyi_graph
-from torch_geometric.loader import DataLoader
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
@@ -50,7 +47,7 @@ class QM90_TS_no_product(Dataset):
             "N": 1.55,
             "O": 1.52,
             "None": 0,
-        }  # Dictionary containing the van_der_waals_radius of the atoms in Argstroms
+        }  # Dictionary containing the van_der_waals_radius of the atoms in Argstroms  # noqa
 
         self.data = []
         self.reactant = []
@@ -74,14 +71,14 @@ class QM90_TS_no_product(Dataset):
 
         # Print the atom count:
         print(
-            f"\nThe dataset includes {self.count} reactions and the following atom count:\n"
+            f"\nThe dataset includes {self.count} reactions and the following atom count:\n"  # noqa
         )
         for atom, count in self.atom_dict.items():
             print(f"\t{atom}: {count}")
         print()
 
         if plot_distribution:
-            # Plot the size distribution of the molecules - Before we One hot encode:
+            # Plot the size distribution of the molecules - Before we One hot encode:  # noqa
             self.plot_molecule_size_distribution()
 
         # One Hot Encode the atoms:
@@ -114,7 +111,7 @@ class QM90_TS_no_product(Dataset):
         # Check that in the path there are the three files:
         assert (
             len(os.listdir(path)) == 4
-        ), "The folder is missing files."  # 4 FIles as we have the reactant images also in the directory
+        ), "The folder is missing files."  # 4 FIles as we have the reactant images also in the directory  # noqa
 
         # Now we can extract the Reactant, Product, TS info:
         for file in os.listdir(path):  #
@@ -159,7 +156,7 @@ class QM90_TS_no_product(Dataset):
                 self.transition_states.append(ts_matrix)
 
     def atom_count(self):
-        # Iterate over all the values in the lists to find if the different molecules:
+        # Iterate over all the values in the lists to find if the different molecules:  # noqa
         for mol in self.reactant:
             for atom in mol:
                 if atom[0] not in self.atom_dict:
@@ -170,7 +167,8 @@ class QM90_TS_no_product(Dataset):
     def plot_molecule_size_distribution(self):
         # Count the size of each molecule
         molecule_sizes = [
-            len(mol) for mol in self.reactant + self.product + self.transition_states
+            len(mol)
+            for mol in self.reactant + self.product + self.transition_states  # noqa
         ]
 
         # Create a dictionary to store the count of each molecule size
@@ -191,7 +189,9 @@ class QM90_TS_no_product(Dataset):
         # Plot the bar chart
         plt.figure(figsize=(10, 6))
         plt.bar(x, y)
-        plt.xlabel("Molecule Size", fontsize=15)  # Increase font size for x-axis label
+        plt.xlabel(
+            "Molecule Size", fontsize=15
+        )  # Increase font size for x-axis label  # noqa
         plt.ylabel("Count", fontsize=15)  # Increase font size for y-axis label
         plt.title(
             "Distribution of Molecule Sizes", fontsize=16
@@ -210,7 +210,7 @@ class QM90_TS_no_product(Dataset):
             ] = 1  # Set the position corresponding to the atom index to 1
             self.ohe_dict[atom] = ohe_vector
 
-        print(f"\nThe Atom Encoding is the following:\n")
+        print("\nThe Atom Encoding is the following:\n")
         for atom, count in self.ohe_dict.items():
             print(f"\t{atom}: {count}")
             # print(type(count))
@@ -221,34 +221,39 @@ class QM90_TS_no_product(Dataset):
         # self.replace_atom_types_with_ohe_vectors(self.product)
         self.replace_atom_types_with_ohe_vectors(self.transition_states)
 
-        # Convert everything in the self.reactants, self.products, and self.transition_states to floats:
+        # Convert everything in the self.reactants, self.products, and self.transition_states to floats:  # noqa
         self.reactant = [
-            [[float(value) for value in atom] for atom in mol] for mol in self.reactant
+            [[float(value) for value in atom] for atom in mol]
+            for mol in self.reactant  # noqa
         ]
-        # self.product = [[[float(value) for value in atom] for atom in mol] for mol in self.product]
+        # self.product = [[[float(value) for value in atom] for atom in mol] for mol in self.product]  # noqa
         self.transition_states = [
             [[float(value) for value in atom] for atom in mol]
             for mol in self.transition_states
         ]
 
         # Calculate the center of gravity and remove it
-        self.delete_centre_gravity()  # This has been tested in the testing images on local computer --> WORKS
+        self.delete_centre_gravity()  # This has been tested in the testing images on local computer --> WORKS  # noqa
 
-        # Convert everything in the self.reactant, self.product, and self.transition_states back to lists
+        # Convert everything in the self.reactant, self.product, and self.transition_states back to lists  # noqa
         self.reactant = [mol.tolist() for mol in self.reactant]
         # self.product = [mol.tolist() for mol in self.product]
-        self.transition_states = [mol.tolist() for mol in self.transition_states]
+        self.transition_states = [
+            mol.tolist() for mol in self.transition_states
+        ]  # noqa
 
         # Check the maximum length among all nested lists for padding
-        # max_length = max(len(mol) for mol in self.reactant + self.product + self.transition_states)
-        max_length = max(len(mol) for mol in self.reactant + self.transition_states)
+        # max_length = max(len(mol) for mol in self.reactant + self.product + self.transition_states)  # noqa
+        max_length = max(
+            len(mol) for mol in self.reactant + self.transition_states
+        )  # noqa
 
         # Pad the nested lists to have the same length
         padded_reactant = [
             mol + [[0.0] * len(mol[0])] * (max_length - len(mol))
             for mol in self.reactant
         ]
-        # padded_product = [mol + [[0.0] * len(mol[0])] * (max_length - len(mol)) for mol in self.product]
+        # padded_product = [mol + [[0.0] * len(mol[0])] * (max_length - len(mol)) for mol in self.product]  # noqa
         padded_transition_states = [
             mol + [[0.0] * len(mol[0])] * (max_length - len(mol))
             for mol in self.transition_states
@@ -265,7 +270,7 @@ class QM90_TS_no_product(Dataset):
             ]
         )
 
-        # Assign the padded values to self.reactant, self.product, and self.transition_states
+        # Assign the padded values to self.reactant, self.product, and self.transition_statesv  # noqa
         self.reactant = torch.tensor(padded_reactant)
         # self.product = torch.tensor(padded_product)
         self.transition_states = torch.tensor(padded_transition_states)
@@ -282,11 +287,11 @@ class QM90_TS_no_product(Dataset):
         # Calculate the center of gravity for each molecule
         for index in range(self.count):
             reactant_coords = np.array(self.reactant[index])[
-                :, len(self.atom_dict) :
+                :, len(self.atom_dict) :  # noqa
             ].astype(float)
-            # product_coords = np.array(self.product[index])[:, len(self.atom_dict):].astype(float)
+            # product_coords = np.array(self.product[index])[:, len(self.atom_dict):].astype(float)  # noqa
             ts_coords = np.array(self.transition_states[index])[
-                :, len(self.atom_dict) :
+                :, len(self.atom_dict) :  # noqa
             ].astype(float)
 
             # Calculate the center of gravity
@@ -296,15 +301,17 @@ class QM90_TS_no_product(Dataset):
 
             # Remove the center of gravity from each molecule
             self.reactant[index] = np.array(self.reactant[index])
-            self.reactant[index][:, len(self.atom_dict) :] = (
+            self.reactant[index][:, len(self.atom_dict) :] = (  # noqa
                 reactant_coords - reactant_center
             )
 
             # self.product[index] = np.array(self.product[index])
-            # self.product[index][:, len(self.atom_dict):] = product_coords - product_center
+            # self.product[index][:, len(self.atom_dict):] = product_coords - product_center  # noqa
 
-            self.transition_states[index] = np.array(self.transition_states[index])
-            self.transition_states[index][:, len(self.atom_dict) :] = (
+            self.transition_states[index] = np.array(
+                self.transition_states[index]
+            )  # noqa
+            self.transition_states[index][:, len(self.atom_dict) :] = (  # noqa
                 ts_coords - ts_center
             )
 
@@ -332,7 +339,9 @@ class QM90_TS_no_product(Dataset):
             self.data.append(graph)
 
     def get_keys_from_value(self, search_value):
-        result = [key for key, value in self.ohe_dict.items() if value == search_value]
+        result = [
+            key for key, value in self.ohe_dict.items() if value == search_value  # noqa
+        ]  # noqa
         return (
             result if result else ["None"]
         )  # Make it return none if it comes upon the masked atoms
@@ -363,7 +372,7 @@ class QM90_TS_no_product(Dataset):
                     ]
                 )  # Get the nuclear charge from the atom type
 
-                # concatenate the OHE, the Nuclear charge, and then the coordinates of the reactant/product/TS
+                # concatenate the OHE, the Nuclear charge, and then the coordinates of the reactant/product/TS  # noqa
                 x = torch.cat(
                     [
                         ohes,
@@ -380,10 +389,13 @@ class QM90_TS_no_product(Dataset):
 
             # This is to just return data as simple matrix and not graph
             for index in range(self.count):
-                # Only take the last 3 parts of the product and transition states as they all contain the OHE
-                # x=torch.cat([self.reactant[index, :, :], self.product[index, :, -3:], self.transition_states[index, :, -3:]], dim=1)
+                # Only take the last 3 parts of the product and transition states as they all contain the OHE  # noqa
+                # x=torch.cat([self.reactant[index, :, :], self.product[index, :, -3:], self.transition_states[index, :, -3:]], dim=1)  # noqa
                 x = torch.cat(
-                    [self.reactant[index, :, :], self.transition_states[index, :, -3:]],
+                    [
+                        self.reactant[index, :, :],
+                        self.transition_states[index, :, -3:],
+                    ],  # noqa
                     dim=1,
                 )
 

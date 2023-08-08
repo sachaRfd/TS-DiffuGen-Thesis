@@ -49,19 +49,19 @@ def main():
         R_G = np.array(Rxn.get("RG"))
         P_G = np.array(Rxn.get("PG"))
 
-        # save_path = f"data/Dataset_RGD1/data/Clean_Geometries/Reaction_{count}/"  # noqa
-        # os.makedirs(save_path, exist_ok=True)
+        save_path = f"data/Dataset_RGD1/data/Clean_Geometries/Reaction_{count}/"  # noqa
+        os.makedirs(save_path, exist_ok=True)
 
-        # # Save TS, reactant, and product geometries as .xyz files
-        # save_xyz_file(
-        #     os.path.join(save_path, "TS_geometry.xyz"), elements, TS_G
-        # )  # noqa
-        # save_xyz_file(
-        #     os.path.join(save_path, "Reactant_geometry.xyz"), elements, R_G
-        # )  # noqa
-        # save_xyz_file(
-        #     os.path.join(save_path, "Product_geometry.xyz"), elements, P_G
-        # )  # noqa
+        # Save TS, reactant, and product geometries as .xyz files
+        save_xyz_file(
+            os.path.join(save_path, "TS_geometry.xyz"), elements, TS_G
+        )  # noqa
+        save_xyz_file(
+            os.path.join(save_path, "Reactant_geometry.xyz"), elements, R_G
+        )  # noqa
+        save_xyz_file(
+            os.path.join(save_path, "Product_geometry.xyz"), elements, P_G
+        )  # noqa
 
         print(f"Geometries saved for Reaction {count}")
         count += 1

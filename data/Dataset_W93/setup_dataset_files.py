@@ -5,12 +5,8 @@ from tqdm import tqdm
 from PIL import Image
 
 from rdkit import Chem
-from rdkit.Chem import AllChem
 
 from rdkit.Chem import Draw
-from rdkit.Chem.Draw import IPythonConsole
-
-import matplotlib.pyplot as plt
 
 
 def extract_geometry(logs):
@@ -18,7 +14,7 @@ def extract_geometry(logs):
         line = logs[index]
         if "Standard Nuclear Orientation" in line:
             atoms, coords = [], []
-            for line in logs[(index + 3) :]:
+            for line in logs[(index + 3) :]:  # noqa
                 if "----------" not in line:
                     data = line.split()
                     atom = data[1]
@@ -32,11 +28,15 @@ def extract_geometry(logs):
 def create_pdb_from_file_path(path_to_raw_log, path_to_final):
     # Check that the raw file exists   --> Possibly make it do error handling
     if not os.path.exists(path_to_raw_log):
-        print("Path to Raw Log is incorrect - Please try again with another path")
+        print(
+            "Path to Raw Log is incorrect - Please try again with another path"
+        )  # noqa
         exit()
-    # Check that the output path exsist:  --> Possibly make it do error Handling
+    # Check that the output path exsist:  --> Possibly make it do error Handling  # noqa
     if not os.path.exists(path_to_final):
-        print("Path to Raw Log is incorrect - Please try again with another path")
+        print(
+            "Path to Raw Log is incorrect - Please try again with another path"
+        )  # noqa
         exit()
 
     # Open the file and store all its lines into logs:
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     dataframe = pd.read_csv("data/w93_dataset/wb97xd3.csv", index_col=0)
     print(f"There are {dataframe.shape[0]} reactions in our data")
 
-    # Now we can add the 3D coordinates for the 3D Reactants, 3D Product, and most importantly the TS into the data CSV file we created above
+    # Now we can add the 3D coordinates for the 3D Reactants, 3D Product, and most importantly the TS into the data CSV file we created above  # noqa
     # First we check that we have the correct number of folders for Geometries
     directory = "data/TS/wb97xd3"
     start_string = "rxn"
@@ -70,7 +70,7 @@ if __name__ == "__main__":
             print("Something else is in the folder")
     print(f"There are {count} TS in our data")
 
-    # Now we can check that all folders contain the Reactant, Product and TS information
+    # Now we can check that all folders contain the Reactant, Product and TS information  # noqa
 
     reactant_count, product_count, ts_count = 0, 0, 0
     for folder in os.listdir(directory):
@@ -85,23 +85,33 @@ if __name__ == "__main__":
             else:
                 print("There is an extra something in one of the folders")
 
-    # No we can assert that the counts are all the same --> making sure we have information for all the geometries:
-    assert reactant_count == product_count == ts_count == count == dataframe.shape[0]
+    # No we can assert that the counts are all the same --> making sure we have information for all the geometries:  # noqa
+    assert (
+        reactant_count
+        == product_count
+        == ts_count
+        == count
+        == dataframe.shape[0]  # noqa
+    )  # noqa
 
-    # Now we can create folders for each reaction - which contains pdb file for reactants. products and TS
+    # Now we can create folders for each reaction - which contains pdb file for reactants. products and TS  # noqa
     directory = "data/"
 
     # if the clean_greometries fodler is not present then we can create it:
     if "Clean_Geometries" in os.listdir(directory):
-        print("Clean_Geometries folder is already present = Loading the PDB files")
+        print(
+            "Clean_Geometries folder is already present = Loading the PDB files"  # noqa
+        )  # noqa
     else:
-        print("Creating the Clearn_Geometries folder - and loading the PDB files")
+        print(
+            "Creating the Clearn_Geometries folder - and loading the PDB files"
+        )  # noqa
         # Create the Directory:
         os.mkdir(os.path.join(directory, "Clean_Geometries"))
 
     full_directory = os.path.join(directory, "Clean_Geometries")
 
-    # Now we can create a folder for each reaction, and load the PDB files to each folder
+    # Now we can create a folder for each reaction, and load the PDB files to each folder  # noqa
     for i in tqdm(range(count)):
         new_directory = os.path.join(full_directory, f"Reaction_{i}")
         # if the folder doesnt already exist --> create it
@@ -114,18 +124,20 @@ if __name__ == "__main__":
         product_path = f"data/TS/wb97xd3/rxn{i:06d}/p{i:06d}.log"
         reactant_path = f"data/TS/wb97xd3/rxn{i:06d}/r{i:06d}.log"
         ts_path = f"data/TS/wb97xd3/rxn{i:06d}/ts{i:06d}.log"
-        # Now we can load all the clean geometries for the Reactants / Products and TS in their appropriate folders:
+        # Now we can load all the clean geometries for the Reactants / Products and TS in their appropriate folders:  # noqa
         create_pdb_from_file_path(
-            product_path, f"data/Clean_Geometries/Reaction_{i}/Product_geometry.xyz"
+            product_path,
+            f"data/Clean_Geometries/Reaction_{i}/Product_geometry.xyz",  # noqa
         )
         create_pdb_from_file_path(
-            reactant_path, f"data/Clean_Geometries/Reaction_{i}/Reactant_geometry.xyz"
+            reactant_path,
+            f"data/Clean_Geometries/Reaction_{i}/Reactant_geometry.xyz",  # noqa
         )
         create_pdb_from_file_path(
             ts_path, f"data/Clean_Geometries/Reaction_{i}/TS_geometry.xyz"
         )
 
-        # Add image of reactant and product from each reaction to the folder too:
+        # Add image of reactant and product from each reaction to the folder too:  # noqa
         smiles_reactant = dataframe.iloc[i][0]
         smiles_product = dataframe.iloc[i][1]
 
@@ -139,14 +151,20 @@ if __name__ == "__main__":
 
         # Create blank image with extra space for reactant and product
         total_width = 2 * image_width + 20  # Add 20 pixels for spacing
-        combined_image = Image.new("RGB", (total_width, image_height), (255, 255, 255))
+        combined_image = Image.new(
+            "RGB", (total_width, image_height), (255, 255, 255)
+        )  # noqa
 
         # Draw reactant image on the left half
-        reactant_image = Draw.MolToImage(mol_reactant, size=(image_width, image_height))
+        reactant_image = Draw.MolToImage(
+            mol_reactant, size=(image_width, image_height)
+        )  # noqa
         combined_image.paste(reactant_image, (0, 0))
 
         # Draw product image on the right half
-        product_image = Draw.MolToImage(mol_product, size=(image_width, image_height))
+        product_image = Draw.MolToImage(
+            mol_product, size=(image_width, image_height)
+        )  # noqa
         combined_image.paste(
             product_image, (image_width + 20, 0)
         )  # Add 20 pixels for spacing
