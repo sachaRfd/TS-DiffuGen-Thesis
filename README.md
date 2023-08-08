@@ -1,6 +1,7 @@
 # Diffusion Models for Optimised Geometry Prediction
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
+![Tests Status](https://github.com/schwallergroup/DiffSach/actions/workflows/flake8.yml/badge.svg)
 
 
 
