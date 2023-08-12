@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
 ![Tests Status](https://github.com/schwallergroup/DiffSach/actions/workflows/flake8.yml/badge.svg)
-
+![Tests Status](https://github.com/schwallergroup/DiffSach/actions/workflows/tests.yml/badge.svg)
 
 
 
@@ -13,14 +13,14 @@ This repository contains the code for implementing
 In the context of this project, transition state optimization refers to finding the most accurate 3D geometry depending on reactant and product constraints.
 
 <div align="center">
-  <img src="visualisations/gifs/example_diffusion.gif", alt="example gif">
+  <img src="visualisations/gifs/sample_5_1x.gif", alt="example gif">
 </div>
 
 ### More Examples:
 
 <div class="image-container">
   <figure>
-    <img src="visualisations/gifs/sample_10/another_example_diffusion_with_overlap.gif" alt="example gif">
+    <img src="visualisations/gifs/sample_4_1x.gif" alt="example gif">
     <figcaption>Transition state optimisation</figcaption>
   </figure>
 </div>

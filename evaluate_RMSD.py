@@ -267,7 +267,7 @@ def calc_cov_mat(rmse_matrix, cov_threshold=0.1):
 if __name__ == "__main__":
     print("Running Evaluation Script\n")
 
-    sample_path = "src_coords_graphs/Diffusion/weights_and_samples/True_use_product_graph_W93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_False_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Samples_3"  # noqa
+    sample_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_cosine_1000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Samples"  # noqa
 
     true_mols, gen_mols = create_lists(sample_path)
 

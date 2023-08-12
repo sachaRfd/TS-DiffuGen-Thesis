@@ -550,12 +550,12 @@ if __name__ == "__main__":
     device = dynamics.setup_device()
 
     # Assign which dataset to use:
-    dataset_to_use = "RGD1"
+    dataset_to_use = "W93"
 
     # Setup Hyper-paremetres:
-    learning_rate_schedule = True
+    learning_rate_schedule = False
     random_rotations = False  # Part of Data Augmentation
-    augment_train_set = False  # Also part of Data Augmentation
+    augment_train_set = True  # Also part of Data Augmentation
     remove_hydrogens = False  # Only Possible with the W93 Dataset
     include_context = False  # Only Possible with the W93 Dataset
 
@@ -576,13 +576,13 @@ if __name__ == "__main__":
     out_node = 3
     context_nf = 0
     n_dims = 3
-    noise_schedule = "sigmoid_2"  # "sigmoid_INTEGER"
+    noise_schedule = "sigmoid_5"  # "sigmoid_INTEGER"
     timesteps = 1_000
-    batch_size = 256  # 128 # 64
+    batch_size = 64  # 128 # 64
     n_layers = 8
     hidden_features = 64
-    lr = 1e-3
-    epochs = 101
+    lr = 1e-4
+    epochs = 2_000
 
     # Setup Saving path:
     model_name = f"{no_product}_no_product{dataset_to_use}_dataset_{include_context}_include_VAN_DER_WAAL_RADII_{random_rotations}_Random_rotations_{augment_train_set}_augment_train_set_{n_layers}_layers_{hidden_features}_hiddenfeatures_{lr}_lr_{noise_schedule}_{timesteps}_timesteps_{batch_size}_batch_size_{epochs}_epochs_{remove_hydrogens}_Rem_Hydrogens"  # noqa
@@ -634,7 +634,8 @@ if __name__ == "__main__":
 
     # Create WandB logger:
     wandb_logger = pytorch_lightning.loggers.WandbLogger(
-        project="Diffusion_large_dataset", name=model_name
+        project="Diffusion_5_layer_2000_timesteps",
+        name=model_name,  # Diffusion_large_dataset
     )
 
     # Setup a learning rate monitor that prints to WandB when we use a learning rate scheduler:  # noqa

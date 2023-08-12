@@ -61,3 +61,6 @@ same_number_of_stereo_centres
 # Temporary Pylightning checkpoints: 
 Diffusion_5_layer_2000_timesteps
 ONE_stereo_centres
+
+
+W93_dataset_weights

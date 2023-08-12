@@ -15,6 +15,8 @@ Adaptations:
 """
 
 import os
+
+# import time
 import numpy as np
 import torch
 from torch.nn import functional as F
@@ -423,6 +425,8 @@ class DiffusionModel(torch.nn.Module):
         Draw samples from the generative model.
         """
 
+        # start_time = time.time() * 1000  # Convert to milliseconds
+
         # Predefined_h compared to theirs
         predefined_h = h
 
@@ -491,6 +495,11 @@ class DiffusionModel(torch.nn.Module):
             x = diffusion_utils.remove_mean_with_mask(
                 x, node_mask.unsqueeze(2).expand(x.size())
             )
+
+        # end_time = time.time() * 1000
+        # execution_time = end_time - start_time
+        # print(f"Function execution time: {execution_time:.2f} ms")
+
         return x
 
     @torch.no_grad()
