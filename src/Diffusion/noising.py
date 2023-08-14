@@ -305,6 +305,6 @@ if __name__ == "__main__":
         xyz_data = return_xyz(sample=[sample], dataset=dataset)
 
         # Write the file:
-        write_xyz_file(xyz_data[0], sample_path)
+        write_xyz_file(xyz_data, sample_path)
 
     print("Finished Creating samples")

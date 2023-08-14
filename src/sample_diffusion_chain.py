@@ -143,14 +143,14 @@ if __name__ == "__main__":
         full_path = os.path.join(save_path, f"{file_name}.xyz")
 
         # Write the file:
-        write_xyz_file(predicted_samples[0], full_path)
+        write_xyz_file(predicted_samples, full_path)
 
     # Save true sample:
     true_sample = torch.cat([atom_ohe, example_x], dim=2)
     true_sample = return_xyz(true_sample, dataset=lit_diff_model.dataset)
     file_name = "true_sample"
     full_path = os.path.join(save_path, f"{file_name}.xyz")
-    write_xyz_file(true_sample[0], full_path)
+    write_xyz_file(true_sample, full_path)
 
     # Save true reactant
     true_reactant = example_sample[:, 4:7].unsqueeze(0)
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     true_reactant = return_xyz(true_reactant, dataset=lit_diff_model.dataset)
     file_name = "true_reactant"
     full_path = os.path.join(save_path, f"{file_name}.xyz")
-    write_xyz_file(true_reactant[0], full_path)
+    write_xyz_file(true_reactant, full_path)
 
     # Save true product:
     true_product = example_sample[:, 7:10].unsqueeze(0)
@@ -166,6 +166,6 @@ if __name__ == "__main__":
     true_product = return_xyz(true_product, dataset=lit_diff_model.dataset)
     file_name = "true_product"
     full_path = os.path.join(save_path, f"{file_name}.xyz")
-    write_xyz_file(true_product[0], full_path)
+    write_xyz_file(true_product, full_path)
 
     print("Finished creating the chain samples")

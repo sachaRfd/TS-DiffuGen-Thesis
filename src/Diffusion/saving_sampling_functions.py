@@ -1,5 +1,5 @@
 """
-This is my current code to create XYZ files of the generated transition states
+This is current code to create XYZ files of the generated transition states
 ------------------------------------------------------------------------------
 """
 
@@ -28,6 +28,14 @@ def write_xyz_file(data, filename):
         Each line contains the atom name, x-coordinate, y-coordinate, and z-coordinate separated
         by spaces.
     """
+
+    # If the filename does not end with .xyz then add to it:
+    if filename[-4:] != ".xyz":
+        print(
+            "Please make sure to have the .xyz extension to the file to be saved.\nFor now we will add it automatically."  # noqa
+        )
+        filename += ".xyz"
+
     with open(filename, "w") as f:
         # The first line should be the size of the molecule and the second line should be empty:# noqa
         f.write(str(len(data)) + "\n\n")
@@ -45,7 +53,7 @@ def write_xyz_file(data, filename):
             f.write(line + "\n")
 
 
-def return_xyz(sample, dataset, remove_hydrogen=False):
+def return_xyz(sample, ohe_dictionary, remove_hydrogen=False):
     """
     Sets up sample into XYZ format.
 
@@ -56,8 +64,7 @@ def return_xyz(sample, dataset, remove_hydrogen=False):
             y-coordinate (float), z-coordinate (float), and optionally an atom property (int).
             If `remove_hydrogen` is True, each atom list contains the atom name (str) and the three-dimensional
             coordinates (x, y, z) as floats.
-        dataset (object): An object representing the dataset with a one-hot encoding dictionary (`ohe_dict`).
-            This dictionary maps atom encodings to their corresponding one-hot encoded vectors.
+        Dictionary with atom-encoding in there
         remove_hydrogen (bool, optional): A flag indicating whether hydrogen atoms should be removed from the output.
             If True, hydrogen atoms are excluded from the output, and the resulting XYZ format contains only
             non-hydrogen atoms. Default is False.
@@ -84,31 +91,26 @@ def return_xyz(sample, dataset, remove_hydrogen=False):
         molecular representation.
     """
     # Now we can remove the samples that have 0 in all the first 4 arrays
-    xyz_data = []
-    for molecule in sample:
-        clean_molecule = []
-        for atom in molecule:
-            atom_list = []
+    clean_molecule = []
+    for atom in sample[0]:
+        atom_list = []
+        if remove_hydrogen:
+            atom_encoding = atom[:3].to(torch.int8)
+        else:
+            atom_encoding = atom[:4].to(torch.int8)
+        if (
+            list(atom_encoding) in ohe_dictionary.values()
+        ):  # Check if we are dealing with real atom or just padding
+            key = next(
+                key
+                for key, value in ohe_dictionary.items()
+                if value == list(atom_encoding)
+            )
+            atom_list.append(key)
             if remove_hydrogen:
-                atom_encoding = atom[:3].to(torch.int8)
+                coords = atom[3:].detach()
             else:
-                atom_encoding = atom[:4].to(torch.int8)
-            if (
-                list(atom_encoding) in dataset.ohe_dict.values()
-            ):  # Check if we are dealing with real atom or just padding
-                key = next(
-                    key
-                    for key, value in dataset.ohe_dict.items()
-                    if value == list(atom_encoding)
-                )
-                atom_list.append(key)
-                if remove_hydrogen:
-                    coords = atom[3:].detach()
-                else:
-                    coords = atom[4:].detach()
-                atom_list.extend([str(coord.item()) for coord in coords])
-                clean_molecule.append(
-                    atom_list
-                )  # Append atom_list to clean_molecule  # noqa
-        xyz_data.append(clean_molecule)  # Append clean_molecule to xyz_data
-    return xyz_data
+                coords = atom[4:].detach()
+            atom_list.extend([str(coord.item()) for coord in coords])
+            clean_molecule.append(atom_list)
+    return clean_molecule

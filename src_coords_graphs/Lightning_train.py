@@ -484,10 +484,10 @@ class LitDiffusionModel(pl.LightningModule):
         # Save the true reactants/products/TS if save_samples set to true:
         if self.save_samples:
             true_filename = os.path.join(folder_path, "true_sample.xyz")
-            write_xyz_file(true_samples[0], true_filename)
+            write_xyz_file(true_samples, true_filename)
 
             reactant_filename = os.path.join(folder_path, "true_reactant.xyz")
-            write_xyz_file(true_reactant[0], reactant_filename)
+            write_xyz_file(true_reactant, reactant_filename)
 
             # product_filename = os.path.join(folder_path, "true_product.xyz")
             # write_xyz_file(true_product[0], product_filename)
@@ -517,7 +517,7 @@ class LitDiffusionModel(pl.LightningModule):
                 aft_aligning_path = os.path.join(folder_path, f"sample_{i}.xyz")  # noqa
 
                 # Save the samples:
-                write_xyz_file(predicted_sample[0], aft_aligning_path)
+                write_xyz_file(predicted_sample, aft_aligning_path)
 
     def test_step(self, batch, batch_idx):
         # Sample a bunch of test samples and then

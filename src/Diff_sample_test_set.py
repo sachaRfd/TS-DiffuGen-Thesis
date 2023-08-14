@@ -24,10 +24,10 @@ if __name__ == "__main__":
     dataset_to_use = "W93"
 
     # Setup Hyper-paremetres:
-    learning_rate_schedule = True
+    learning_rate_schedule = False
     random_rotations = False  # Part of Data Augmentation
-    augment_train_set = False  # Also part of Data Augmentation
-    remove_hydrogens = False
+    augment_train_set = True  # Also part of Data Augmentation
+    remove_hydrogens = True
     include_context = False
 
     # If we do not include the product in the diffusoin step:
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     out_node = 3
     context_nf = 0
     n_dims = 3
-    noise_schedule = "sigmoid_5"
+    noise_schedule = "sigmoid_2"
     loss_type = "l2"
     timesteps = 1_000
     batch_size = 64
@@ -57,36 +57,37 @@ if __name__ == "__main__":
     epochs = 1000
     test_sampling_number = 10
     save_samples = True
-    save_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_5_1000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Samples/"  # noqa
+    save_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2000_epochs_True_Rem_Hydrogens/Samples/"  # noqa
 
     # Create an instance of your Lightning model
     lit_diff_model = LitDiffusionModel(
-        dataset_to_use,
-        in_node_nf,
-        context_nf,
-        hidden_features,
-        out_node,
-        n_dims,
-        n_layers,
-        device,
-        lr,
-        remove_hydrogens,
-        test_sampling_number,
-        save_samples,
-        save_path,
-        timesteps,
-        noise_schedule,
+        dataset_to_use=dataset_to_use,
+        in_node_nf=in_node_nf,
+        context_nf=context_nf,
+        hidden_features=hidden_features,
+        out_node=out_node,
+        n_dims=n_dims,
+        n_layers=n_layers,
+        device=device,
+        lr=lr,
+        remove_hydrogens=remove_hydrogens,
+        test_sampling_number=test_sampling_number,
+        save_samples=save_samples,
+        save_path=save_path,
+        timesteps=timesteps,
+        noise_schedule=noise_schedule,
         random_rotations=random_rotations,
         augment_train_set=augment_train_set,
         include_context=include_context,
         learning_rate_schedule=learning_rate_schedule,
         no_product=no_product,
+        batch_size=batch_size,
     )
 
     print("Model parameters device:", next(lit_diff_model.parameters()).device)
 
     # Load the saved model state dictionary
-    model_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_5_1000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Weights/weights.pth"  # noqa
+    model_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2000_epochs_True_Rem_Hydrogens/Weights/weights.pth"  # noqa
 
     # Load the state dict into the model:
     lit_diff_model.load_state_dict(torch.load(model_path))
@@ -94,32 +95,33 @@ if __name__ == "__main__":
     # Create a trainer instance for testing
     test_model(lit_diff_model, logger=None)
 
-    # Second Run:
+    # # Second Run:
 
-    save_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_5_1000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Samples_2/"  # noqa
+    save_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2000_epochs_True_Rem_Hydrogens/Samples_2/"  # noqa
 
     # Create an instance of your Lightning model
     lit_diff_model = LitDiffusionModel(
-        dataset_to_use,
-        in_node_nf,
-        context_nf,
-        hidden_features,
-        out_node,
-        n_dims,
-        n_layers,
-        device,
-        lr,
-        remove_hydrogens,
-        test_sampling_number,
-        save_samples,
-        save_path,
-        timesteps,
-        noise_schedule,
+        dataset_to_use=dataset_to_use,
+        in_node_nf=in_node_nf,
+        context_nf=context_nf,
+        hidden_features=hidden_features,
+        out_node=out_node,
+        n_dims=n_dims,
+        n_layers=n_layers,
+        device=device,
+        lr=lr,
+        remove_hydrogens=remove_hydrogens,
+        test_sampling_number=test_sampling_number,
+        save_samples=save_samples,
+        save_path=save_path,
+        timesteps=timesteps,
+        noise_schedule=noise_schedule,
         random_rotations=random_rotations,
         augment_train_set=augment_train_set,
         include_context=include_context,
         learning_rate_schedule=learning_rate_schedule,
         no_product=no_product,
+        batch_size=batch_size,
     )
 
     print("Model parameters device:", next(lit_diff_model.parameters()).device)
@@ -130,31 +132,32 @@ if __name__ == "__main__":
     # Create a trainer instance for testing
     test_model(lit_diff_model, logger=None)
 
-    # Third Run:
-    save_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_5_1000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Samples_3/"  # noqa
+    # # Third Run:
+    save_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2000_epochs_True_Rem_Hydrogens/Samples_3/"  # noqa
 
     # Create an instance of your Lightning model
     lit_diff_model = LitDiffusionModel(
-        dataset_to_use,
-        in_node_nf,
-        context_nf,
-        hidden_features,
-        out_node,
-        n_dims,
-        n_layers,
-        device,
-        lr,
-        remove_hydrogens,
-        test_sampling_number,
-        save_samples,
-        save_path,
-        timesteps,
-        noise_schedule,
+        dataset_to_use=dataset_to_use,
+        in_node_nf=in_node_nf,
+        context_nf=context_nf,
+        hidden_features=hidden_features,
+        out_node=out_node,
+        n_dims=n_dims,
+        n_layers=n_layers,
+        device=device,
+        lr=lr,
+        remove_hydrogens=remove_hydrogens,
+        test_sampling_number=test_sampling_number,
+        save_samples=save_samples,
+        save_path=save_path,
+        timesteps=timesteps,
+        noise_schedule=noise_schedule,
         random_rotations=random_rotations,
         augment_train_set=augment_train_set,
         include_context=include_context,
         learning_rate_schedule=learning_rate_schedule,
         no_product=no_product,
+        batch_size=batch_size,
     )
 
     print("Model parameters device:", next(lit_diff_model.parameters()).device)

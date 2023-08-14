@@ -453,13 +453,13 @@ class LitDiffusionModel(pl.LightningModule):
         # Save the true reactants/products/TS if save_samples set to true:
         if self.save_samples:
             true_filename = os.path.join(folder_path, "true_sample.xyz")
-            write_xyz_file(true_samples[0], true_filename)
+            write_xyz_file(true_samples, true_filename)
 
             reactant_filename = os.path.join(folder_path, "true_reactant.xyz")
-            write_xyz_file(true_reactant[0], reactant_filename)
+            write_xyz_file(true_reactant, reactant_filename)
 
             product_filename = os.path.join(folder_path, "true_product.xyz")
-            write_xyz_file(true_product[0], product_filename)
+            write_xyz_file(true_product, product_filename)
 
         for i in range(number_samples):
             predicted_sample = (
@@ -486,7 +486,7 @@ class LitDiffusionModel(pl.LightningModule):
                 aft_aligning_path = os.path.join(folder_path, f"sample_{i}.xyz")  # noqa
 
                 # Save the samples:
-                write_xyz_file(predicted_sample[0], aft_aligning_path)
+                write_xyz_file(predicted_sample, aft_aligning_path)
 
     def test_step(self, batch, batch_idx):
         # Sample a bunch of test samples and then
@@ -556,7 +556,7 @@ if __name__ == "__main__":
     learning_rate_schedule = False
     random_rotations = False  # Part of Data Augmentation
     augment_train_set = True  # Also part of Data Augmentation
-    remove_hydrogens = False  # Only Possible with the W93 Dataset
+    remove_hydrogens = True  # Only Possible with the W93 Dataset
     include_context = False  # Only Possible with the W93 Dataset
 
     # If we do not include the product in the diffusoin step:
@@ -576,13 +576,13 @@ if __name__ == "__main__":
     out_node = 3
     context_nf = 0
     n_dims = 3
-    noise_schedule = "sigmoid_5"  # "sigmoid_INTEGER"
+    noise_schedule = "sigmoid_2"  # "sigmoid_INTEGER"
     timesteps = 1_000
     batch_size = 64  # 128 # 64
     n_layers = 8
     hidden_features = 64
     lr = 1e-4
-    epochs = 2_000
+    epochs = 2_001
 
     # Setup Saving path:
     model_name = f"{no_product}_no_product{dataset_to_use}_dataset_{include_context}_include_VAN_DER_WAAL_RADII_{random_rotations}_Random_rotations_{augment_train_set}_augment_train_set_{n_layers}_layers_{hidden_features}_hiddenfeatures_{lr}_lr_{noise_schedule}_{timesteps}_timesteps_{batch_size}_batch_size_{epochs}_epochs_{remove_hydrogens}_Rem_Hydrogens"  # noqa
@@ -634,7 +634,7 @@ if __name__ == "__main__":
 
     # Create WandB logger:
     wandb_logger = pytorch_lightning.loggers.WandbLogger(
-        project="Diffusion_5_layer_2000_timesteps",
+        project="Diffusion_Hydrogen_ablation",
         name=model_name,  # Diffusion_large_dataset
     )
 
