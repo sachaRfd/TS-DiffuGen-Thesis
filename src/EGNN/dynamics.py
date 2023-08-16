@@ -19,7 +19,7 @@ from tqdm import tqdm
 import numpy as np
 from torch.utils.data.dataset import random_split
 
-from data.Dataset_W93.dataset_class import QM90_TS
+from data.Dataset_W93.dataset_class import W93_TS
 from src.EGNN.egnn import EGNN
 from src.EGNN.utils import (
     remove_mean,
@@ -190,7 +190,7 @@ if __name__ == "__main__":
 
     # Load the dataset:
     direc = "data/Dataset_W93/data/Clean_Geometries"
-    dataset = QM90_TS(directory=direc, graph=False)
+    dataset = W93_TS(directory=direc, graph=False)
 
     # Calculate the sizes for each split
     dataset_size = len(dataset)

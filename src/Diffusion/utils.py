@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from data.Dataset_W93.dataset_class import QM90_TS
+from data.Dataset_W93.dataset_class import W93_TS
 from torch_geometric.loader import DataLoader
 
 
@@ -275,7 +275,7 @@ if __name__ == "__main__":
     print("Running Tests")
 
     # Let's check that all the above functions work as intended here !!!
-    dataset = QM90_TS()
+    dataset = W93_TS()
     train_loader = DataLoader(dataset=dataset, batch_size=64, shuffle=True)
 
     example_sample = next(iter(train_loader))

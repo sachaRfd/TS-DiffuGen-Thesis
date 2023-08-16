@@ -12,7 +12,7 @@ import os
 import numpy as np
 import torch
 
-from data.Dataset_W93.dataset_class import QM90_TS
+from data.Dataset_W93.dataset_class import W93_TS
 import src.Diffusion.utils as diffusion_utils
 from src.Diffusion.saving_sampling_functions import return_xyz, write_xyz_file
 
@@ -258,7 +258,7 @@ if __name__ == "__main__":
     t = t_int / timesteps
 
     # Get a sample X to perform the noising on:
-    dataset = QM90_TS(directory="data/Dataset_W93/data/Clean_Geometries/")
+    dataset = W93_TS(directory="data/Dataset_W93/data/Clean_Geometries/")
     example_sample, node_mask = dataset[0]
     x = example_sample[:, -3:]
     ohe = example_sample[:, :4]

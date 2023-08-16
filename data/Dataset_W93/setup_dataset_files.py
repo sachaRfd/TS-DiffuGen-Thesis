@@ -1,15 +1,17 @@
 import numpy as np
 import pandas as pd
 import os
+import argparse
 from tqdm import tqdm
 from PIL import Image
-
 from rdkit import Chem
-
 from rdkit.Chem import Draw
 
 
 def extract_geometry(logs):
+    """
+    Extract geometry from DFT .log files
+    """
     for index in reversed(range(len(logs))):
         line = logs[index]
         if "Standard Nuclear Orientation" in line:
@@ -21,60 +23,50 @@ def extract_geometry(logs):
                     coordinates = [float(geo) for geo in data[2:]]
                     atoms.append(atom)
                     coords.append(coordinates)
-                else:  # Means we have reached the end --> Return
+                else:
                     return atoms, np.array(coords)
 
 
 def create_pdb_from_file_path(path_to_raw_log, path_to_final):
-    # Check that the raw file exists   --> Possibly make it do error handling
+    """
+    Write .XYZ file from a .log DFT file
+    """
     if not os.path.exists(path_to_raw_log):
-        print(
-            "Path to Raw Log is incorrect - Please try again with another path"
-        )  # noqa
-        exit()
-    # Check that the output path exsist:  --> Possibly make it do error Handling  # noqa
-    if not os.path.exists(path_to_final):
-        print(
-            "Path to Raw Log is incorrect - Please try again with another path"
-        )  # noqa
+        print("Path to Raw Log is incorrect. Please provide a valid path.")
         exit()
 
-    # Open the file and store all its lines into logs:
     with open(path_to_raw_log, "r") as file:
         logs = file.read().splitlines()
 
     atoms, coordinates = extract_geometry(logs)
 
     with open(path_to_final, "w") as file:
-        counter = 1
+        file.write(str(len(atoms)) + "\n\n")
         for atom, coord in zip(atoms, coordinates):
             x, y, z = coord
             file.write(f"{atom} {x} {y} {z}\n")
-            counter += 1
 
 
-if __name__ == "__main__":
-    # First get the total number of reactions from the dataframe
-    dataframe = pd.read_csv("data/w93_dataset/wb97xd3.csv", index_col=0)
-    print(f"There are {dataframe.shape[0]} reactions in our data")
+def process_reactions(dataframe, directory):
+    """
+    Function to Process .log files and write them in .xyz format
+    """
+    TS_Directory = directory + "/TS/wb97xd3/"
 
-    # Now we can add the 3D coordinates for the 3D Reactants, 3D Product, and most importantly the TS into the data CSV file we created above  # noqa
-    # First we check that we have the correct number of folders for Geometries
-    directory = "data/TS/wb97xd3"
+    # Assert that the above directory exists
+    assert os.path.exists(TS_Directory), f"{TS_Directory} does not exist."
+
+    # Assert that there is the same amount of reactions in the dataframe than in the TS_Directory:   # noqa
     start_string = "rxn"
-    count = 0
-    for folder in os.listdir(directory):
-        if folder.startswith(start_string):
-            count += 1
-        else:
-            print("Something else is in the folder")
+    count = sum(
+        folder.startswith(start_string) for folder in os.listdir(TS_Directory)
+    )  # noqa
     print(f"There are {count} TS in our data")
-
-    # Now we can check that all folders contain the Reactant, Product and TS information  # noqa
+    assert dataframe.shape[0] == count
 
     reactant_count, product_count, ts_count = 0, 0, 0
-    for folder in os.listdir(directory):
-        for files in os.listdir(os.path.join(directory, folder)):
+    for folder in os.listdir(TS_Directory):
+        for files in os.listdir(os.path.join(TS_Directory, folder)):
             if files.startswith("ts"):
                 ts_count += 1
             elif files.startswith("r"):
@@ -82,59 +74,30 @@ if __name__ == "__main__":
             elif files.startswith("p"):
                 product_count += 1
 
-            else:
-                print("There is an extra something in one of the folders")
+    assert reactant_count == product_count == ts_count == count
 
-    # No we can assert that the counts are all the same --> making sure we have information for all the geometries:  # noqa
-    assert (
-        reactant_count
-        == product_count
-        == ts_count
-        == count
-        == dataframe.shape[0]  # noqa
-    )  # noqa
-
-    # Now we can create folders for each reaction - which contains pdb file for reactants. products and TS  # noqa
-    directory = "data/"
-
-    # if the clean_greometries fodler is not present then we can create it:
-    if "Clean_Geometries" in os.listdir(directory):
-        print(
-            "Clean_Geometries folder is already present = Loading the PDB files"  # noqa
-        )  # noqa
-    else:
-        print(
-            "Creating the Clearn_Geometries folder - and loading the PDB files"
-        )  # noqa
-        # Create the Directory:
-        os.mkdir(os.path.join(directory, "Clean_Geometries"))
-
-    full_directory = os.path.join(directory, "Clean_Geometries")
-
-    # Now we can create a folder for each reaction, and load the PDB files to each folder  # noqa
+    clean_geometries_directory = os.path.join(directory, "Clean_Geometries")
+    os.makedirs(clean_geometries_directory, exist_ok=True)
     for i in tqdm(range(count)):
-        new_directory = os.path.join(full_directory, f"Reaction_{i}")
-        # if the folder doesnt already exist --> create it
-        if os.path.exists(new_directory):
-            print("Folders are already present - Loading new geometries")
-        else:
-            os.makedirs(new_directory)
+        reaction_directory = os.path.join(
+            clean_geometries_directory, f"Reaction_{i}"
+        )  # noqa
+        os.makedirs(reaction_directory, exist_ok=True)
 
-        # Update the Log directories: --> Made sure to be padded by 6 Zeroes
-        product_path = f"data/TS/wb97xd3/rxn{i:06d}/p{i:06d}.log"
-        reactant_path = f"data/TS/wb97xd3/rxn{i:06d}/r{i:06d}.log"
-        ts_path = f"data/TS/wb97xd3/rxn{i:06d}/ts{i:06d}.log"
-        # Now we can load all the clean geometries for the Reactants / Products and TS in their appropriate folders:  # noqa
+        product_path = directory + f"/TS/wb97xd3/rxn{i:06d}/p{i:06d}.log"
+        reactant_path = directory + f"/TS/wb97xd3/rxn{i:06d}/r{i:06d}.log"
+        ts_path = directory + f"/TS/wb97xd3/rxn{i:06d}/ts{i:06d}.log"
+
         create_pdb_from_file_path(
             product_path,
-            f"data/Clean_Geometries/Reaction_{i}/Product_geometry.xyz",  # noqa
+            os.path.join(reaction_directory, "Product_geometry.xyz"),  # noqa
         )
         create_pdb_from_file_path(
             reactant_path,
-            f"data/Clean_Geometries/Reaction_{i}/Reactant_geometry.xyz",  # noqa
+            os.path.join(reaction_directory, "Reactant_geometry.xyz"),  # noqa
         )
         create_pdb_from_file_path(
-            ts_path, f"data/Clean_Geometries/Reaction_{i}/TS_geometry.xyz"
+            ts_path, os.path.join(reaction_directory, "TS_geometry.xyz")
         )
 
         # Add image of reactant and product from each reaction to the folder too:  # noqa
@@ -170,7 +133,31 @@ if __name__ == "__main__":
         )  # Add 20 pixels for spacing
 
         # Save the combined image as a PNG file
-        image_path = os.path.join(
-            f"data/Clean_Geometries/Reaction_{i}/Reaction_image.png"
-        )
+        image_path = (
+            clean_geometries_directory + f"/Reaction_{i}/Reaction_image.png"
+        )  # noqa
         combined_image.save(image_path)
+        count += 1
+    print("Finished Setting up xyz files")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Process reactions data.")
+    parser.add_argument(
+        "--directory",
+        type=str,
+        help="Path to the directory containing reaction data.",  # noqa
+    )
+    args = parser.parse_args()
+
+    dataframe = pd.read_csv(
+        "data/Dataset_W93/data/w93_dataset/wb97xd3.csv", index_col=0
+    )
+
+    if args.directory:
+        directory = args.directory
+    else:
+        # directory = "data/Dataset_W93/example_data_for_testing"
+        directory = "data/w93_dataset/data"
+
+    process_reactions(dataframe, directory)

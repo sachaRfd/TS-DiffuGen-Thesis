@@ -1,8 +1,3 @@
-"""
-Script to train our diffusion model using python Lightning
-----------------------------------------------------------
-"""
-
 import os
 import pytorch_lightning
 import pytorch_lightning as pl
@@ -19,11 +14,17 @@ from sklearn.model_selection import train_test_split
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
-from data.Dataset_W93.dataset_class import QM90_TS
+from data.Dataset_W93.dataset_class import W93_TS
 from data.Dataset_TX1.dataset_TX1_class import TX1_dataset
 from data.Dataset_RGD1.RGD1_dataset_class import RGD1_TS
 
 from pytorch_lightning.callbacks import LearningRateMonitor
+
+
+"""
+Script to train diffusion model using python Lightning
+----------------------------------------------------------
+"""
 
 
 # Pytorch Lightning class for the diffusion model:
@@ -114,7 +115,7 @@ class LitDiffusionModel(pl.LightningModule):
             self.save_path = save_path
 
         if self.dataset_to_use == "W93":
-            self.dataset = QM90_TS(
+            self.dataset = W93_TS(
                 directory="data/Dataset_W93/data/Clean_Geometries",
                 remove_hydrogens=self.remove_hydrogens,
                 include_context=include_context,
@@ -509,10 +510,6 @@ class LitDiffusionModel(pl.LightningModule):
             self.save_path_batch = self.save_path + f"batch_{batch_idx}/"
             os.makedirs(self.save_path_batch, exist_ok=True)
 
-        # # Print shape of samples
-        # print(test_coords.shape)
-        # print(test_node_mask.shape)
-
         # Iterate over each test compound and create samples:
         for i in range(test_coords.shape[0]):
             # Create a subfolder for the molecule:
@@ -556,8 +553,8 @@ if __name__ == "__main__":
     learning_rate_schedule = False
     random_rotations = False  # Part of Data Augmentation
     augment_train_set = True  # Also part of Data Augmentation
-    remove_hydrogens = True  # Only Possible with the W93 Dataset
-    include_context = False  # Only Possible with the W93 Dataset
+    remove_hydrogens = False  # Only Possible with the W93 Dataset
+    include_context = "Activation_Energy"  # Only Possible with the W93 Dataset
 
     # If we do not include the product in the diffusoin step:
     no_product = False
@@ -582,10 +579,10 @@ if __name__ == "__main__":
     n_layers = 8
     hidden_features = 64
     lr = 1e-4
-    epochs = 2_001
+    epochs = 500
 
     # Setup Saving path:
-    model_name = f"{no_product}_no_product{dataset_to_use}_dataset_{include_context}_include_VAN_DER_WAAL_RADII_{random_rotations}_Random_rotations_{augment_train_set}_augment_train_set_{n_layers}_layers_{hidden_features}_hiddenfeatures_{lr}_lr_{noise_schedule}_{timesteps}_timesteps_{batch_size}_batch_size_{epochs}_epochs_{remove_hydrogens}_Rem_Hydrogens"  # noqa
+    model_name = f"{no_product}_no_product{dataset_to_use}_dataset_{include_context}_context_{random_rotations}_Random_rotations_{augment_train_set}_augment_train_set_{n_layers}_layers_{hidden_features}_hiddenfeatures_{lr}_lr_{noise_schedule}_{timesteps}_timesteps_{batch_size}_batch_size_{epochs}_epochs_{remove_hydrogens}_Rem_Hydrogens"  # noqa
     folder_name = (
         f"src/Diffusion/{dataset_to_use}_dataset_weights/" + model_name + "/"
     )  # noqa
@@ -629,12 +626,12 @@ if __name__ == "__main__":
     )
 
     # Load the weights from initial state:
-    # path_to_load = "src/Diffusion/Clean_lightning/W93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_False_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Weights/weights.pth"  # noqa
-    # lit_diff_model.load_state_dict(torch.load(path_to_load))
+    path_to_load = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_Activation_Energy_context_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Weights/weights.pth"  # noqa
+    lit_diff_model.load_state_dict(torch.load(path_to_load))
 
     # Create WandB logger:
     wandb_logger = pytorch_lightning.loggers.WandbLogger(
-        project="Diffusion_Hydrogen_ablation",
+        project="Diffusion_Activation_Energy",
         name=model_name,  # Diffusion_large_dataset
     )
 

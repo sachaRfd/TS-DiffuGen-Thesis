@@ -1,21 +1,31 @@
 import os
 import numpy as np
 import torch
-
-# from torch.utils.data import random_split
 from torch_geometric.data import Dataset, Data
 from torch_geometric.utils import erdos_renyi_graph
 from torch_geometric.loader import DataLoader
 import matplotlib.pyplot as plt
+import pandas as pd
 from sklearn.model_selection import train_test_split
 
 
-""" # noqa
-Difference compared to other dataset class is that when loading the files we exclude the first 2 lines because they are the amount of atoms and an empty line. 
+"""
+Difference compared to other dataset class is that 
+when loading the files we exclude the first 2 lines
+because they are the amount of atoms and an empty line.
 """
 
 
 class RGD1_TS(Dataset):
+    NUCLEAR_CHARGES = {"H": 1, "C": 6, "N": 7, "O": 8, "None": 0}
+    VAN_DER_WAALS_RADIUS = {
+        "H": 1.20,
+        "C": 1.70,
+        "N": 1.55,
+        "O": 1.52,
+        "None": 0,
+    }
+
     def __init__(
         self,
         directory="data/Dataset_RGD1/data/Clean_Geometries/",
@@ -26,141 +36,126 @@ class RGD1_TS(Dataset):
     ):
         super().__init__()
 
-        # First we can read all the data from the files:
-        self.remove_hydrogen = remove_hydrogens
+        self.plot_distribution = plot_distribution
+        self.graph = graph
+        self.remove_hydrogens = remove_hydrogens
         self.directory = directory
         self.context = include_context
         self.count = 0
 
-        # Dictionaries
+        # assert if there is context it should be either Nuclear, Van_Der_Waals or Activation_Energy  # noqa
+        self.valid_contexts = [
+            "Nuclear_Charges",
+            "Van_Der_Waals",
+            "Activation_Energy",
+        ]
+        assert (
+            not self.context or self.context in self.valid_contexts
+        ), "The context should be one of: " + ", ".join(self.valid_contexts)
+
+        if self.context == "Activation_Energy":
+            # Load the CSV file with extra variables:
+            path_to_csv = "data/Dataset_W93/data/w93_dataset/wb97xd3.csv"
+            # assert that the csv file is present in location:
+            assert os.path.exists(
+                path_to_csv
+            ), f"CSV file '{path_to_csv}' does not exist"
+            self.df = pd.read_csv(path_to_csv).ea
+
+        # Data-structures:
         self.atom_dict = {}
         self.ohe_dict = {}
-        self.nuclear_charges = {
-            "H": 1,
-            "C": 6,
-            "N": 7,
-            "O": 8,
-            "None": 0,
-        }  # Dictionary containing the nuclear charges of the atoms
-        self.van_der_waals_radius = {
-            "H": 1.20,
-            "C": 1.70,
-            "N": 1.55,
-            "O": 1.52,
-            "None": 0,
-        }  # Dictionary containing the van_der_waals_radius of the atoms in Argstroms   # noqa
-
         self.data = []
         self.reactant = []
         self.product = []
         self.transition_states = []
-
-        # Node masks:
         self.node_mask = []
 
-        # Run Assert for path:
         assert os.path.exists(self.directory)
 
-        # Run the Setup:
-        self.count_data()
+        self.load_data()
+        print("Finished creating the dataset.")
 
-        # Append the reaction data to tbe data-variale
+    def load_data(self):
+        """# noqa
+        Loads the dataset by extracting data from reaction files and performing preprocessing steps.
+        """
+        self.count_data()
         for reaction_number in range(self.count):
             self.extract_data(reaction_number)
-
-        # Count the atoms:
         self.atom_count()
 
-        # Print the atom count:
-        print(
-            f"\nThe dataset includes {self.count} reactions and the following atom count:\n"  # noqa
-        )
-        for atom, count in self.atom_dict.items():
-            print(f"\t{atom}: {count}")
-        print()
-
-        if plot_distribution:
-            # Plot the size distribution of the molecules - Before we One hot encode:   # noqa
+        if self.plot_distribution:
             self.plot_molecule_size_distribution()
 
-        # One Hot Encode the atoms:
         self.one_hot_encode()
 
-        # Assert that the shapes are correct:
         assert (
             self.reactant.shape
             == self.product.shape
             == self.transition_states.shape  # noqa
         )  # noqa
 
-        if graph:
-            # Create the graphs:
+        if self.graph:
             print("Creating Graphs")
             self.create_graph()
         else:
-            print("Not Using graphs")
+            print("Not Using graphs.")
             self.create_data_array()
 
-        print("\nFinished creating the dataset. ")
-
     def count_data(self):
+        """
+        Counts the number of reactions in the dataset.
+        """
         # See how many sub-folders are present:
         for folder in os.listdir(self.directory):
             if folder.startswith("Reaction_"):
                 self.count += 1
 
+    def read_xyz_file(self, file_path):
+        """
+        Reads an XYZ file and returns its data.
+        """
+        data = []
+        with open(file_path, "r") as read_file:
+            lines = read_file.readlines()
+            for line in lines[2:]:
+                if self.remove_hydrogens and line[0] == "H":
+                    continue
+                data.append(line.split())
+        return data
+
     def extract_data(self, reaction_number):
+        """# noqa
+        Extracts reactant, product, and transition state information from specified reaction.
+        """
         # Get the Full path:
         path = os.path.join(self.directory, f"Reaction_{reaction_number}")
         assert os.path.exists(path)  # Assert the path Exists
 
         # Check that in the path there are the three files:
-        assert len(os.listdir(path)) == 3, "The folder is missing files."  # noqa
+        assert len(os.listdir(path)) == 3, "The folder is missing files."
 
         # Now we can extract the Reactant, Product, TS info:
-        for file in os.listdir(path):  #
+        for file in os.listdir(path):
             if file.startswith("Reactant"):
-                # Append to Reactant Matrix:
-                reactant_matrix = []
-                with open(os.path.join(path, file), "r") as read_file:
-                    lines = read_file.readlines()
-                    for line in lines[2:]:
-                        if self.remove_hydrogen:
-                            # Check that the line is not Oxygens:
-                            if line[0] != "H":
-                                reactant_matrix.append(line.split())
-                        else:
-                            reactant_matrix.append(line.split())
+                # Extract reactant matrix
+                reactant_matrix = self.read_xyz_file(os.path.join(path, file))
                 self.reactant.append(reactant_matrix)
-
             elif file.startswith("Product"):
-                # Append to Reactant Matrix:
-                product_matrix = []
-                with open(os.path.join(path, file), "r") as read_file:
-                    lines = read_file.readlines()
-                    for line in lines[2:]:
-                        if self.remove_hydrogen:
-                            if line[0] != "H":
-                                product_matrix.append(line.split())
-                        else:
-                            product_matrix.append(line.split())
+                # Extract product matrix
+                product_matrix = self.read_xyz_file(os.path.join(path, file))
                 self.product.append(product_matrix)
-
             elif file.startswith("TS"):
-                # Append to Reactant Matrix:
-                ts_matrix = []
-                with open(os.path.join(path, file), "r") as read_file:
-                    lines = read_file.readlines()
-                    for line in lines[2:]:
-                        if self.remove_hydrogen:
-                            if line[0] != "H":
-                                ts_matrix.append(line.split())
-                        else:
-                            ts_matrix.append(line.split())
+                # Extract transition state matrix
+                ts_matrix = self.read_xyz_file(os.path.join(path, file))
                 self.transition_states.append(ts_matrix)
 
     def atom_count(self):
-        # Iterate over all the values in the lists to find if the different molecules:   # noqa
+        """
+        Counts the occurrences of different atom types in the reactions.
+        """
+        # Iterate over all the values in the lists to find if the different molecules:  # noqa
         for mol in self.reactant:
             for atom in mol:
                 if atom[0] not in self.atom_dict:
@@ -169,6 +164,9 @@ class RGD1_TS(Dataset):
                     self.atom_dict[atom[0]] += 1
 
     def plot_molecule_size_distribution(self):
+        """
+        Plots the distribution of molecule sizes in the dataset.
+        """
         # Count the size of each molecule
         molecule_sizes = [
             len(mol)
@@ -195,30 +193,61 @@ class RGD1_TS(Dataset):
         plt.bar(x, y)
         plt.xlabel(
             "Molecule Size", fontsize=15
-        )  # Increase font size for x-axis label   # noqa
+        )  # Increase font size for x-axis label  # noqa
         plt.ylabel("Count", fontsize=15)  # Increase font size for y-axis label
         plt.title(
             "Distribution of Molecule Sizes", fontsize=16
         )  # Increase font size for title
         plt.xticks(rotation=90)
         plt.tight_layout()
-        plt.savefig("RGD1_Distribution.png")  # Change the filename as needed
-        # plt.show()
+        plt.show()
 
-    def one_hot_encode(self):
-        num_of_atoms = len(self.atom_dict)
-
+    def generate_one_hot_encodings(self, num_of_atoms):
+        """Generates one-hot encodings for atom types."""
         for index, atom in enumerate(self.atom_dict):
             ohe_vector = [0] * num_of_atoms
-            ohe_vector[
-                index
-            ] = 1  # Set the position corresponding to the atom index to 1
+            ohe_vector[index] = 1
             self.ohe_dict[atom] = ohe_vector
+
+    def convert_to_float(self, data):
+        """
+        Convert nested list elements to floats.
+        """
+        data = [
+            [[float(value) for value in atom] for atom in mol] for mol in data
+        ]  # noqa
+        return data
+
+    def convert_to_list(self, data):
+        """
+        Convert nested list elements to Lists.
+        """
+        data = [mol.tolist() for mol in data]
+        return data
+
+    def pad_data(self, data, max_length):
+        """]
+        Pads molecule so that all have the same size
+            and can be fed through batch_loader
+        """
+        data = [
+            mol + [[0.0] * len(mol[0])] * (max_length - len(mol))
+            for mol in data  # noqa
+        ]  # noqa
+        return torch.tensor(data)
+
+    def one_hot_encode(self):
+        """# noqa
+        Performs one-hot encoding of atom types and prepares other data-processing.
+        """
+        num_of_atoms = len(self.atom_dict)
+
+        # Generate OHE:
+        self.generate_one_hot_encodings(num_of_atoms)
 
         print("\nThe Atom Encoding is the following:\n")
         for atom, count in self.ohe_dict.items():
             print(f"\t{atom}: {count}")
-            # print(type(count))
         print()
 
         # Replace the atom str with OHE vector
@@ -226,52 +255,28 @@ class RGD1_TS(Dataset):
         self.replace_atom_types_with_ohe_vectors(self.product)
         self.replace_atom_types_with_ohe_vectors(self.transition_states)
 
-        # Convert everything in the self.reactants, self.products, and self.transition_states to floats:   # noqa
-        self.reactant = [
-            [[float(value) for value in atom] for atom in mol]
-            for mol in self.reactant  # noqa
-        ]
-        self.product = [
-            [[float(value) for value in atom] for atom in mol]
-            for mol in self.product  # noqa
-        ]
-        self.transition_states = [
-            [[float(value) for value in atom] for atom in mol]
-            for mol in self.transition_states
-        ]
+        # Convert everything in the self.reactants, self.products, and self.transition_states to floats:  # noqa
+        self.reactant = self.convert_to_float(self.reactant)
+        self.product = self.convert_to_float(self.product)
+        self.transition_states = self.convert_to_float(self.transition_states)
 
         # Calculate the center of gravity and remove it
-        self.delete_centre_gravity()  # This has been tested in the testing images on local computer --> WORKS   # noqa
+        self.delete_centre_gravity()
 
-        # Convert everything in the self.reactant, self.product, and self.transition_states back to lists   # noqa
-        self.reactant = [mol.tolist() for mol in self.reactant]
-        self.product = [mol.tolist() for mol in self.product]
-        self.transition_states = [
-            mol.tolist() for mol in self.transition_states
-        ]  # noqa
+        # Convert everything in the self.reactant, self.product, and self.transition_states back to lists  # noqa
+        self.reactant = self.convert_to_list(self.reactant)
+        self.product = self.convert_to_list(self.product)
+        self.transition_states = self.convert_to_list(self.transition_states)
 
         # Check the maximum length among all nested lists for padding
-        max_length = max(
-            len(mol)
-            for mol in self.reactant + self.product + self.transition_states  # noqa
-        )
+        max_length = max(len(mol) for mol in self.reactant)
 
         # Pad the nested lists to have the same length
-        padded_reactant = [
-            mol + [[0.0] * len(mol[0])] * (max_length - len(mol))
-            for mol in self.reactant
-        ]
-        padded_product = [
-            mol + [[0.0] * len(mol[0])] * (max_length - len(mol))
-            for mol in self.product
-        ]
-        padded_transition_states = [
-            mol + [[0.0] * len(mol[0])] * (max_length - len(mol))
-            for mol in self.transition_states
-        ]
-
-        # Make a copy of the unpadded chemicals
-        self.unpadded_chemical = self.reactant.copy()
+        self.reactant = self.pad_data(self.reactant, max_length=max_length)
+        self.product = self.pad_data(self.product, max_length=max_length)
+        self.transition_states = self.pad_data(
+            self.transition_states, max_length=max_length
+        )
 
         # Create the node mask:
         self.node_mask = torch.tensor(
@@ -281,12 +286,10 @@ class RGD1_TS(Dataset):
             ]
         )
 
-        # Assign the padded values to self.reactant, self.product, and self.transition_states   # noqa
-        self.reactant = torch.tensor(padded_reactant)
-        self.product = torch.tensor(padded_product)
-        self.transition_states = torch.tensor(padded_transition_states)
-
     def replace_atom_types_with_ohe_vectors(self, molecule_list):
+        """# noqa
+        Replaces atom types in molecule data with their one-hot encoded vectors.
+        """
         for mol in molecule_list:
             for atom in mol:
                 atom_type = atom[0]  # Get the atom type
@@ -295,6 +298,10 @@ class RGD1_TS(Dataset):
                     atom[0:1] = ohe_vector
 
     def delete_centre_gravity(self):
+        """
+        Removes the center of gravity from molecule coordinates.
+        Needed to keep model roto-translation invariant
+        """
         # Calculate the center of gravity for each molecule
         for index in range(self.count):
             reactant_coords = np.array(self.reactant[index])[
@@ -331,7 +338,10 @@ class RGD1_TS(Dataset):
             )
 
     def create_graph(self):
-        # We can append it to the self.data tensor of graphs, and make the positions the TS, we also make it fully connected   # noqa
+        """
+        Creates fully connected graphs from the data.
+        """
+        # We can append it to the self.data tensor of graphs, and make the positions the TS, we also make it fully connected  # noqa
         for index in range(self.count):
             # Create Fully connected graph
             num_nodes = self.reactant[index].shape[0]
@@ -352,6 +362,9 @@ class RGD1_TS(Dataset):
             self.data.append(graph)
 
     def get_keys_from_value(self, search_value):
+        """
+        Retrieves atom types based on their one-hot encoded vectors.
+        """
         result = [
             key for key, value in self.ohe_dict.items() if value == search_value  # noqa
         ]  # noqa
@@ -360,58 +373,59 @@ class RGD1_TS(Dataset):
         )  # Make it return none if it comes upon the masked atoms
 
     def create_data_array(self):
-        # Check if we want to add context to the data:
+        """# noqa
+        Creates data arrays with context information based on the selected context or without context.
+        """
         if self.context:
-            # Add this to utils file later
-            print("Adding the context to the dataset")
-            print("Including nuclear charges")
-            # This is to just return data as simple matrix and not graph
+            print(f"Including {self.context} to context")
             for index in range(self.count):
-                # Let's get the nuclear charge of the atom from the OHE:
                 ohes = self.reactant[index, :, :-3]
 
-                # Get the atomic features:
-                atomic_feature_vector = ohes
+                if self.context == "Van_Der_Waals":
+                    # Get the atom type
+                    atom_types = [
+                        self.get_keys_from_value(atom.tolist()) for atom in ohes  # noqa
+                    ]  # Get the atom type
+                    context_values = torch.tensor(
+                        [
+                            [self.VAN_DER_WAALS_RADIUS[atom_type[0]]]
+                            for atom_type in atom_types
+                        ]
+                    )
 
-                # # Get the nuclear charges of all the atoms:   # noqa
-                # atom_types = [self.get_keys_from_value(atom.tolist()) for atom in atomic_feature_vector]    # Get the atom type   # noqa
-                # nuclear_charges = torch.tensor([[self.nuclear_charges[atom_type[0]]] for atom_type in atom_types])  # Get the nuclear charge from the atom type   # noqa
-
-                # # concatenate the OHE, the Nuclear charge, and then the coordinates of the reactant/product/TS   # noqa
-                # x=torch.cat([ohes, nuclear_charges, self.reactant[index, :, -3:], self.product[index, :, -3:], self.transition_states[index, :, -3:]], dim=1)   # noqa
-                # self.data.append(x)
-
-                # Get the Van Der Waals RADII of all the atoms:
-                atom_types = [
-                    self.get_keys_from_value(atom.tolist())
-                    for atom in atomic_feature_vector
-                ]  # Get the atom type
-                van_der_waals = torch.tensor(
-                    [
-                        [self.van_der_waals_radius[atom_type[0]]]
-                        for atom_type in atom_types
+                elif self.context == "Nuclear_Charges":
+                    # Get the atom type
+                    atom_types = [
+                        self.get_keys_from_value(atom.tolist()) for atom in ohes  # noqa
                     ]
-                )  # Get the nuclear charge from the atom type
+                    context_values = torch.tensor(
+                        [
+                            [self.NUCLEAR_CHARGES[atom_type[0]]]
+                            for atom_type in atom_types
+                        ]
+                    )
+                elif self.context == "Activation_Energy":
+                    context_values = torch.tensor(
+                        self.df.iloc[index], dtype=torch.float32
+                    ).expand(  # noqa
+                        self.reactant[0].shape[0], 1
+                    )
 
-                # concatenate the OHE, the Nuclear charge, and then the coordinates of the reactant/product/TS   # noqa
                 x = torch.cat(
                     [
                         ohes,
-                        van_der_waals,
+                        context_values,
                         self.reactant[index, :, -3:],
                         self.product[index, :, -3:],
                         self.transition_states[index, :, -3:],
                     ],
                     dim=1,
                 )
-                self.data.append(x)
 
+                self.data.append(x)
         else:
             print("Not including Context information")
-
-            # This is to just return data as simple matrix and not graph
             for index in range(self.count):
-                # Only take the last 3 parts of the product and transition states as they all contain the OHE   # noqa
                 x = torch.cat(
                     [
                         self.reactant[index, :, :],
@@ -423,21 +437,27 @@ class RGD1_TS(Dataset):
                 self.data.append(x)
 
     def get(self, idx):
-        # Remove the mean --> So that we have translation invariant data
+        """
+        Retrieves a data sample and its corresponding node mask.
+        """
         return self.data[idx], self.node_mask[idx]
 
     def len(self):
+        """
+        Returns the length of the dataset.
+        """
         return len(self.data)
 
 
 if __name__ == "__main__":
     remove_hydrogens = False
+    include_context = "Activation_Energy"
     dataset = RGD1_TS(
         directory="data/Dataset_RGD1/data/Clean_Geometries/",
         remove_hydrogens=remove_hydrogens,
         graph=False,
         plot_distribution=False,
-        include_context=False,
+        include_context=include_context,
     )
 
     # In all papers they use 8:1:1 ratio
@@ -448,21 +468,9 @@ if __name__ == "__main__":
         test_dataset, test_size=0.5, random_state=42
     )
 
-    batch_size = 128
+    batch_size = 20
     train_loader = DataLoader(
         dataset=train_dataset, batch_size=batch_size, shuffle=True
     )
 
-    # print(next(iter(train_loader))[0][0][0].dtype)
-
-    # # sample, node_masks = next(iter(train_loader))
-    # # print(sample[10])
-    # # print(node_masks[1])
-
-    # # # Calculate the mean along the second dimension (molecule by molecule)
-    # # mean_xyz = torch.mean(sample[:, :, 4:7], dim=1, keepdim=True)
-
-    # # # Print the mean for each molecule
-    # # for i in range(batch_size):
-    # #     print(node_masks[i])
-    # #     print(f"Molecule {i+1}: Mean (x, y, z) = {mean_xyz[i]}")
+    print(next(iter(train_loader))[0][0][0])

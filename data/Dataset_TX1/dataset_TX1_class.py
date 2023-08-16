@@ -3,7 +3,7 @@ import torch
 from torch_geometric.data import Dataset
 from torch_geometric.loader import DataLoader
 from sklearn.model_selection import train_test_split
-from Dataset_TX1.TX1_dataloader import Dataloader as TX1_Loader
+from data.Dataset_TX1.TX1_dataloader import Dataloader as TX1_Loader
 
 
 class TX1_dataset(Dataset):

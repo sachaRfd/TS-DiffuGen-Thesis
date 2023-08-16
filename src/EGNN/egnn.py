@@ -34,7 +34,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 
-from data.Dataset_W93.dataset_class import QM90_TS
+from data.Dataset_W93.dataset_class import W93_TS
 
 
 class GCL(nn.Module):
@@ -489,7 +489,7 @@ if __name__ == "__main__":
     print("Running Script")
 
     direc = "data/Dataset_W93/data/Clean_Geometries"
-    dataset = QM90_TS(directory=direc, graph=False)
+    dataset = W93_TS(directory=direc, graph=False)
 
     # Calculate the sizes for each split
     dataset_size = len(dataset)

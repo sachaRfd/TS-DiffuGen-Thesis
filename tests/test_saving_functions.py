@@ -196,7 +196,6 @@ def test_write_file_saved():
     finally:
         # Delete temporary directory as it was just used for testing purposes
         shutil.rmtree(temp_dir)
-    return None
 
 
 def test_write_file_format():

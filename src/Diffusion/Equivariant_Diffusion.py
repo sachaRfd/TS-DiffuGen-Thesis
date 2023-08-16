@@ -26,7 +26,7 @@ from torch.nn import MSELoss
 import wandb
 from sklearn.model_selection import train_test_split
 
-from data.Dataset_W93.dataset_class import QM90_TS
+from data.Dataset_W93.dataset_class import W93_TS
 from src.EGNN import dynamics
 from Diffusion.noising import PredefinedNoiseSchedule
 
@@ -622,7 +622,7 @@ if __name__ == "__main__":
         device=device,
     )  # Something is going wrong with the embedding of H
 
-    dataset = QM90_TS(
+    dataset = W93_TS(
         directory="Dataset_W93/data/Clean_Geometries/",
         remove_hydrogens=remove_hydrogens,
         include_context=include_context,
