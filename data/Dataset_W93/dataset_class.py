@@ -138,7 +138,7 @@ class W93_TS(Dataset):
         data = []
         with open(file_path, "r") as read_file:
             lines = read_file.readlines()
-            for line in lines:
+            for line in lines[2:]:
                 if self.remove_hydrogens and line[0] == "H":
                     continue
                 data.append(line.split())
@@ -188,6 +188,10 @@ class W93_TS(Dataset):
         """
         Plots the distribution of molecule sizes in the dataset.
         """
+        self.path_to_save_image = "Distribution_of_Molecule_sizes.png"
+        print(
+            f"Plotting Image in the following path: {self.path_to_save_image}"
+        )  # noqa
         # Count the size of each molecule
         molecule_sizes = [
             len(mol)
@@ -222,6 +226,7 @@ class W93_TS(Dataset):
         plt.xticks(rotation=90)
         plt.tight_layout()
         plt.show()
+        plt.savefig(self.path_to_save_image)
 
     def generate_one_hot_encodings(self, num_of_atoms):
         """Generates one-hot encodings for atom types."""

@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 import wandb
 
 
-from Diffusion.Diffusion_product_graph import DiffusionModel
+from Diffusion_graph.Diffusion_product_graph import DiffusionModel
 from src_coords_graphs.EGNN_product_graph.dynamics_with_graph import (
     EGNN_dynamics,
 )

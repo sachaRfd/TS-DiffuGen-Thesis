@@ -6,7 +6,9 @@ Code was adapted from https://github.com/ehoogeboom/e3_diffusion_for_molecules/b
 
 Main adaptations: 
     1. Clean code: 
-    - Remove GNN dynamics as we have E3
+    2. Debugged and Cleaned:
+    - Removed un-used functions and classes
+    - Made redundant the updated features (using underscore)
 
 
 Scripts also contains code to sample from dataset and then add random noise to it to see if the model is able to predict it. 
@@ -26,7 +28,7 @@ from src.EGNN.utils import (
     remove_mean_with_mask,
     assert_mean_zero_with_mask,
     setup_device,
-)  # noqa
+)
 
 
 class EGNN_dynamics_QM9(nn.Module):
@@ -117,7 +119,6 @@ class EGNN_dynamics_QM9(nn.Module):
             h = torch.cat([h, context], dim=1)
 
         if self.mode == "egnn_dynamics":
-            # edges = [edge.to(xh.device) for edge in edges]
             h_final, x_final = self.egnn(
                 h.to(xh.device),
                 x.to(xh.device),
@@ -206,21 +207,26 @@ if __name__ == "__main__":
     batch_size = 64
 
     train_loader = DataLoader(
-        dataset=train_dataset, batch_size=batch_size, shuffle=True
+        dataset=train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
     )
     val_loader = DataLoader(
-        dataset=val_dataset, batch_size=batch_size, shuffle=True
-    )  # noqa
+        dataset=val_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+    )
     test_loader = DataLoader(
-        dataset=test_dataset, batch_size=batch_size, shuffle=True
-    )  # noqa
+        dataset=test_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+    )
 
     in_node_nf = 10 + 1  # Number of h features
     out_node = 3
     context_nf = 0
     n_dims = 3
 
-    # 5 in hidden_df seems to be H + time
     model = EGNN_dynamics_QM9(
         in_node_nf=in_node_nf,
         context_node_nf=context_nf,
@@ -229,7 +235,7 @@ if __name__ == "__main__":
         sin_embedding=True,
         n_layers=5,
         device=device,
-    )  # Something is going wrong with the embedding of H
+    )
     print("Model Setup")
 
     trainable_parameters = sum(
@@ -288,7 +294,7 @@ if __name__ == "__main__":
 
             true_noise = remove_mean_with_mask(
                 true_noise,
-                node_masks.unsqueeze(2).expand(true_noise[:, :, -3:].size()),  # noqa
+                node_masks.unsqueeze(2).expand(true_noise[:, :, -3:].size()),
             )
             assert_mean_zero_with_mask(
                 true_noise[:, :, -3:],
@@ -327,9 +333,6 @@ if __name__ == "__main__":
                 edge_mask=edge_mask.to(device),
                 context=None,
             )
-            print(batch.shape)
-            print(x_final.shape)
-            exit()
             loss = loss_fn(x_final, true_noise.to(device))
             loss.backward()  # BackProp the loss
             optimizer.step()

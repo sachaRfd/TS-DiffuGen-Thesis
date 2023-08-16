@@ -440,15 +440,19 @@ class LitDiffusionModel(pl.LightningModule):
 
         # Convert to XYZ format:
         true_samples = return_xyz(
-            true_sample, dataset=self.dataset, remove_hydrogen=remove_hydrogens
+            true_sample,
+            ohe_dictionary=self.dataset.ohe_dict,
+            remove_hydrogen=remove_hydrogens,
         )
         true_reactant = return_xyz(
             true_reactant,
-            dataset=self.dataset,
+            ohe_dictionary=self.dataset.ohe_dict,
             remove_hydrogen=remove_hydrogens,  # noqa
         )
         true_product = return_xyz(
-            true_product, dataset=self.dataset, remove_hydrogen=remove_hydrogens  # noqa
+            true_product,
+            ohe_dictionary=self.dataset.ohe_dict,
+            remove_hydrogen=remove_hydrogens,  # noqa
         )
 
         # Save the true reactants/products/TS if save_samples set to true:
@@ -477,7 +481,7 @@ class LitDiffusionModel(pl.LightningModule):
             # Return it to xyz format:
             predicted_sample = return_xyz(
                 predicted_sample,
-                dataset=self.dataset,
+                ohe_dictionary=self.dataset.ohe_dict,
                 remove_hydrogen=remove_hydrogens,  # noqa
             )
 
@@ -579,7 +583,7 @@ if __name__ == "__main__":
     n_layers = 8
     hidden_features = 64
     lr = 1e-4
-    epochs = 500
+    epochs = 501
 
     # Setup Saving path:
     model_name = f"{no_product}_no_product{dataset_to_use}_dataset_{include_context}_context_{random_rotations}_Random_rotations_{augment_train_set}_augment_train_set_{n_layers}_layers_{hidden_features}_hiddenfeatures_{lr}_lr_{noise_schedule}_{timesteps}_timesteps_{batch_size}_batch_size_{epochs}_epochs_{remove_hydrogens}_Rem_Hydrogens"  # noqa

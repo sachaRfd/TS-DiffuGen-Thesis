@@ -27,8 +27,8 @@ if __name__ == "__main__":
     learning_rate_schedule = False
     random_rotations = False  # Part of Data Augmentation
     augment_train_set = True  # Also part of Data Augmentation
-    remove_hydrogens = True
-    include_context = False
+    remove_hydrogens = False
+    include_context = "Activation_Energy"
 
     # If we do not include the product in the diffusoin step:
     no_product = False
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     epochs = 1000
     test_sampling_number = 10
     save_samples = True
-    save_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2000_epochs_True_Rem_Hydrogens/Samples/"  # noqa
+    save_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_Activation_Energy_context_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2_500_epochs_False_Rem_Hydrogens/Samples/"  # noqa
 
     # Create an instance of your Lightning model
     lit_diff_model = LitDiffusionModel(
@@ -87,7 +87,7 @@ if __name__ == "__main__":
     print("Model parameters device:", next(lit_diff_model.parameters()).device)
 
     # Load the saved model state dictionary
-    model_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2000_epochs_True_Rem_Hydrogens/Weights/weights.pth"  # noqa
+    model_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_Activation_Energy_context_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2_500_epochs_False_Rem_Hydrogens/Weights/weights.pth"  # noqa
 
     # Load the state dict into the model:
     lit_diff_model.load_state_dict(torch.load(model_path))
@@ -95,9 +95,9 @@ if __name__ == "__main__":
     # Create a trainer instance for testing
     test_model(lit_diff_model, logger=None)
 
-    # # Second Run:
+    # Run 2:
 
-    save_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2000_epochs_True_Rem_Hydrogens/Samples_2/"  # noqa
+    save_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_Activation_Energy_context_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2_500_epochs_False_Rem_Hydrogens/Samples_2/"  # noqa
 
     # Create an instance of your Lightning model
     lit_diff_model = LitDiffusionModel(
@@ -132,8 +132,9 @@ if __name__ == "__main__":
     # Create a trainer instance for testing
     test_model(lit_diff_model, logger=None)
 
-    # # Third Run:
-    save_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2000_epochs_True_Rem_Hydrogens/Samples_3/"  # noqa
+    # third run:
+
+    save_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_Activation_Energy_context_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2_500_epochs_False_Rem_Hydrogens/Samples_3/"  # noqa
 
     # Create an instance of your Lightning model
     lit_diff_model = LitDiffusionModel(

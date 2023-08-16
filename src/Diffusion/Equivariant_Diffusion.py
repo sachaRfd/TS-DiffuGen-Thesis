@@ -9,14 +9,12 @@ Adaptations:
 1. Cleaned whole script
     1.1 Removed unused functions and asserts
     1.2 Removed Variational-Lower-Bound Loss as not used
-    1.3 More
     1.4 Seperated functions for modularity
 2. Changed so Noising on H is not re-integrated into the model - as we are only trying to predict X part of xH     # noqa
 """
 
 import os
 
-# import time
 import numpy as np
 import torch
 from torch.nn import functional as F
@@ -112,8 +110,15 @@ class DiffusionModel(torch.nn.Module):
             )
 
     def phi(self, x, t, node_mask, edge_mask, context):
+        """
+        Function to get Predicted noise
+        """
         _, net_out = self.dynamics._forward(
-            t, x, node_mask, edge_mask, context=context
+            t,
+            x,
+            node_mask,
+            edge_mask,
+            context=context,
         )  # Predicted H is USELESS IN our use-case
         diffusion_utils.assert_mean_zero_with_mask(
             net_out, node_mask.unsqueeze(2).expand(net_out.size())
@@ -146,9 +151,7 @@ class DiffusionModel(torch.nn.Module):
 
     def subspace_dimensionality(self, node_mask):
         """Compute the dimensionality on translation-invariant linear subspace where distributions on x are defined."""  # noqa
-        number_of_nodes = torch.sum(
-            node_mask.squeeze(1), dim=1
-        )  # Changed from squeeze(2)
+        number_of_nodes = torch.sum(node_mask.squeeze(1), dim=1)
         return (number_of_nodes - 1) * self.n_dims
 
     def sigma_and_alpha_t_given_s(
@@ -168,18 +171,17 @@ class DiffusionModel(torch.nn.Module):
             -expm1(softplus(gamma_s) - softplus(gamma_t)), target_tensor
         )
 
-        # alpha_t_given_s = alpha_t / alpha_s
         log_alpha2_t = F.logsigmoid(-gamma_t)
         log_alpha2_s = F.logsigmoid(-gamma_s)
         log_alpha2_t_given_s = log_alpha2_t - log_alpha2_s
 
         alpha_t_given_s = torch.exp(0.5 * log_alpha2_t_given_s)
         alpha_t_given_s = self.inflate_batch_array(
-            alpha_t_given_s, target_tensor
-        )  # noqa
+            alpha_t_given_s,
+            target_tensor,
+        )
 
         sigma_t_given_s = torch.sqrt(sigma2_t_given_s)
-
         return sigma2_t_given_s, sigma_t_given_s, alpha_t_given_s
 
     def compute_x_pred(self, net_out, zt, gamma_t, final=False):
@@ -192,7 +194,7 @@ class DiffusionModel(torch.nn.Module):
         )  # This is from the prediction formula fron noise to prediction value
         return x_pred
 
-    def compute_error(self, net_out, gamma_t, eps):
+    def compute_error(self, net_out, eps):
         """Computes error, i.e. the most likely prediction of x."""
         error = self.mse(eps, net_out)
         return error
@@ -327,7 +329,7 @@ class DiffusionModel(torch.nn.Module):
         )
 
         # Compute the error.
-        error = self.compute_error(net_out, gamma_t, eps)
+        error = self.compute_error(net_out, eps)
 
         return error
 
@@ -335,9 +337,6 @@ class DiffusionModel(torch.nn.Module):
         """
         Computes the loss (type l2 or NLL) if training. And if eval then always computes NLL.           # noqa
         """
-        # Normalize data, take into account volume change in x.
-        # x  , h, delta_log_px = self.normalize(x, h, node_mask)
-
         loss = self.compute_loss(
             x, h, node_mask, edge_mask, context=None, t0_always=False
         )
@@ -425,8 +424,6 @@ class DiffusionModel(torch.nn.Module):
         Draw samples from the generative model.
         """
 
-        # start_time = time.time() * 1000  # Convert to milliseconds
-
         # Predefined_h compared to theirs
         predefined_h = h
 
@@ -495,10 +492,6 @@ class DiffusionModel(torch.nn.Module):
             x = diffusion_utils.remove_mean_with_mask(
                 x, node_mask.unsqueeze(2).expand(x.size())
             )
-
-        # end_time = time.time() * 1000
-        # execution_time = end_time - start_time
-        # print(f"Function execution time: {execution_time:.2f} ms")
 
         return x
 
@@ -620,7 +613,7 @@ if __name__ == "__main__":
         sin_embedding=True,
         n_layers=n_layers,
         device=device,
-    )  # Something is going wrong with the embedding of H
+    )
 
     dataset = W93_TS(
         directory="Dataset_W93/data/Clean_Geometries/",
@@ -640,13 +633,18 @@ if __name__ == "__main__":
 
     # Create DataLoaders
     train_loader = DataLoader(
-        dataset=train_dataset, batch_size=batch_size, shuffle=True
+        dataset=train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
     )
     val_loader = DataLoader(
-        dataset=val_dataset, batch_size=batch_size, shuffle=True
-    )  # noqa
+        dataset=val_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+    )
     test_loader = DataLoader(
-        dataset=test_dataset, batch_size=batch_size
+        dataset=test_dataset,
+        batch_size=batch_size,
     )  # Not shuffled so that we can visualise the same samples
 
     # Setup the diffusion model:

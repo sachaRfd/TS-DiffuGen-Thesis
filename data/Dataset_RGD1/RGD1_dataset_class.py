@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 
 
 """
-Difference compared to other dataset class is that 
+Difference compared to other dataset class is that
 when loading the files we exclude the first 2 lines
 because they are the amount of atoms and an empty line.
 """

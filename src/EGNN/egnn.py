@@ -6,24 +6,10 @@ Code was adapted from https://github.com/ehoogeboom/e3_diffusion_for_molecules/b
 
 
 Main Adaptations: 
-    1. Clearn up code: 
-    xx
-
-Comments: 
-- When you dont use node masks --> It seems that the model performs better at denoising. 
-    - Even when you integrate the node mask into the loss (Meaning you muliply the created samples with the node mask) 
-    the loss is still smaller than if you integrated it into the model
-
-
-    - Added this line to the forward EGNN             x = x * node_mask  # Added this line
-
-    
-- The noise added has to be made sure to not include noise in the masked nodes
-
-
-- Now i will try implementing the edge mask and see if it changes anything
-    - In this code there is no need for an edge mask as the node is automatically not connected to itself --> when using get_edges_batch
-            due to this line:             if i != j:
+    1. Clearn up code
+    2. Debug
+    3. Allowed for setting up training and Proof of Concept
+    4. Adapted code to allow for extra edge-attributes (edge features to be added) --> Check Other EGNN script for this
 """
 
 from torch import nn
@@ -154,8 +140,14 @@ class EquivariantUpdate(nn.Module):
         self.aggregation_method = aggregation_method
 
     def coord_model(
-        self, h, coord, edge_index, coord_diff, edge_attr, edge_mask
-    ):  # noqa
+        self,
+        h,
+        coord,
+        edge_index,
+        coord_diff,
+        edge_attr,
+        edge_mask,
+    ):
         row, col = edge_index
         input_tensor = torch.cat([h[row], h[col], edge_attr], dim=1)
         if self.tanh:
@@ -253,9 +245,14 @@ class EquivariantBlock(nn.Module):
         self.to(self.device)
 
     def forward(
-        self, h, x, edge_index, node_mask=None, edge_mask=None, edge_attr=None
-    ):  # noqa
-        # Edit Emiel: Remove velocity as input
+        self,
+        h,
+        x,
+        edge_index,
+        node_mask=None,
+        edge_mask=None,
+        edge_attr=None,
+    ):
         distances, coord_diff = coord2diff(x, edge_index, self.norm_constant)
         if self.sin_embedding is not None:
             distances = self.sin_embedding(distances)
@@ -344,9 +341,6 @@ class EGNN(nn.Module):
         if self.sin_embedding is not None:
             distances = self.sin_embedding(distances)
         h = self.embedding(h)
-        # print("Distance shape: ", distances.shape)
-        # print(distances[0][:10])
-        # exit()
         for i in range(0, self.n_layers):
             h, x = self._modules["e_block_%d" % i](
                 h,
@@ -391,9 +385,6 @@ def coord2diff(x, edge_index, norm_constant=1):
     radial = torch.sum((coord_diff) ** 2, 1).unsqueeze(1)
     norm = torch.sqrt(radial + 1e-8)
     coord_diff = coord_diff / (norm + norm_constant)
-    # print(radial.shape)
-    # print(coord_diff.shape)
-    # exit()
     return radial, coord_diff
 
 
@@ -505,14 +496,20 @@ if __name__ == "__main__":
     batch_size = 1
 
     train_loader = DataLoader(
-        dataset=train_dataset, batch_size=batch_size, shuffle=True
+        dataset=train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
     )
     val_loader = DataLoader(
-        dataset=val_dataset, batch_size=batch_size, shuffle=True
-    )  # noqa
+        dataset=val_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+    )
     test_loader = DataLoader(
-        dataset=test_dataset, batch_size=batch_size, shuffle=True
-    )  # noqa
+        dataset=test_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+    )
 
     device = setup_device()
 
@@ -523,7 +520,11 @@ if __name__ == "__main__":
     x_dim = 3
 
     egnn = EGNN(
-        in_node_nf=n_feat, hidden_nf=64, out_node_nf=3, in_edge_nf=1, n_layers=3  # noqa
+        in_node_nf=n_feat,
+        hidden_nf=64,
+        out_node_nf=3,
+        in_edge_nf=1,
+        n_layers=3,
     )
     egnn.to(device)
 
@@ -588,18 +589,14 @@ if __name__ == "__main__":
             x_noisy = x_noisy.view(-1, x_dim)
 
             edges = get_adj_matrix(
-                n_nodes=n_nodes, batch_size=batch_size, device=device
+                n_nodes=n_nodes,
+                batch_size=batch_size,
+                device=device,
             )
 
             edges = [
                 edge.to(device) for edge in edges
             ]  # Convert each tensor in the list to GPU tensor
-
-            # print(edge_mask.shape)
-            # print(len(edges))
-            # print(len(edges[1]))
-
-            # exit()
 
             h_out, x_out = egnn(
                 h.to(device),
