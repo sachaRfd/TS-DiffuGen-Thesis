@@ -18,12 +18,28 @@ import math
 from torch.utils.data.dataset import random_split
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from src.EGNN.utils import setup_device
 
 
 from data.Dataset_W93.dataset_class import W93_TS
 
 
 class GCL(nn.Module):
+    """# noqa
+    Graph Convolutional Layer (GCL) module.
+
+    Args:
+        input_nf (int): Number of input node features.
+        output_nf (int): Number of output node features.
+        hidden_nf (int): Number of hidden node features.
+        normalization_factor (int): Normalization factor for aggregation.
+        aggregation_method (str): Aggregation method for aggregating edge information.
+        edges_in_d (int): Dimensionality of additional edge attributes.
+        nodes_att_dim (int): Dimensionality of additional node attributes.
+        act_fn (nn.Module): Activation function applied to MLP layers.
+        attention (bool): Whether to apply attention mechanism.
+    """
+
     def __init__(
         self,
         input_nf,
@@ -80,7 +96,7 @@ class GCL(nn.Module):
         return out, mij
 
     def node_model(self, x, edge_index, edge_attr, node_attr):
-        row, col = edge_index
+        row, _ = edge_index
         agg = unsorted_segment_sum(
             edge_attr,
             row,
@@ -113,6 +129,19 @@ class GCL(nn.Module):
 
 
 class EquivariantUpdate(nn.Module):
+    """#noqa
+    Equivariant Update module for EGNN.
+
+    Args:
+        hidden_nf (int): Number of hidden node features.
+        normalization_factor (int): Normalization factor for aggregation.
+        aggregation_method (str): Aggregation method for aggregating edge information.  # noqa
+        edges_in_d (int): Dimensionality of additional edge attributes.
+        act_fn (nn.Module): Activation function applied to MLP layers.
+        tanh (bool): Whether to apply hyperbolic tangent to coordinates.
+        coords_range (float): Range of coordinate values.
+    """
+
     def __init__(
         self,
         hidden_nf,
@@ -189,6 +218,25 @@ class EquivariantUpdate(nn.Module):
 
 
 class EquivariantBlock(nn.Module):
+    """# noqa
+    Equivariant Block module for EGNN.
+
+    Args:
+        hidden_nf (int): Number of hidden node features.
+        edge_feat_nf (int): Number of edge feature dimensions.
+        device (str): Device to run the module on.
+        act_fn (nn.Module): Activation function applied to MLP layers.
+        n_layers (int): Number of layers in the block.
+        attention (bool): Whether to apply attention mechanism.
+        norm_diff (bool): Whether to normalize coordinate differences.
+        tanh (bool): Whether to apply hyperbolic tangent to coordinates.
+        coords_range (float): Range of coordinate values.
+        norm_constant (int): Normalization constant for coordinate differences.
+        sin_embedding (nn.Module): Sinusoid embedding for distances.
+        normalization_factor (int): Normalization factor for aggregation.
+        aggregation_method (str): Aggregation method for aggregating edge information.
+    """
+
     def __init__(
         self,
         hidden_nf,
@@ -197,7 +245,6 @@ class EquivariantBlock(nn.Module):
         act_fn=nn.SiLU(),
         n_layers=2,
         attention=True,
-        norm_diff=True,
         tanh=False,
         coords_range=15,
         norm_constant=1,
@@ -210,7 +257,6 @@ class EquivariantBlock(nn.Module):
         self.device = device
         self.n_layers = n_layers
         self.coords_range_layer = float(coords_range)
-        self.norm_diff = norm_diff
         self.norm_constant = norm_constant
         self.sin_embedding = sin_embedding
         self.normalization_factor = normalization_factor
@@ -276,6 +322,28 @@ class EquivariantBlock(nn.Module):
 
 
 class EGNN(nn.Module):
+    """# noqa
+    Equivariant Graph Neural Network (EGNN) module.
+
+    Args:
+        in_node_nf (int): Number of input node features.
+        in_edge_nf (int): Number of input edge features.
+        hidden_nf (int): Number of hidden node features.
+        device (str): Device to run the module on.
+        act_fn (nn.Module): Activation function applied to MLP layers.
+        n_layers (int): Number of layers in the EGNN.
+        attention (bool): Whether to apply attention mechanism.
+        norm_diff (bool): Whether to normalize coordinate differences.
+        out_node_nf (int): Number of output node features.
+        tanh (bool): Whether to apply hyperbolic tangent to coordinates.
+        coords_range (float): Range of coordinate values.
+        norm_constant (int): Normalization constant for coordinate differences.
+        inv_sublayers (int): Number of layers in the EquivariantBlock.
+        sin_embedding (bool): Whether to use sinusoid embeddings.
+        normalization_factor (int): Normalization factor for aggregation.
+        aggregation_method (str): Aggregation method for aggregating edge information.
+    """
+
     def __init__(
         self,
         in_node_nf,
@@ -285,7 +353,6 @@ class EGNN(nn.Module):
         act_fn=nn.SiLU(),
         n_layers=3,
         attention=False,
-        norm_diff=True,
         out_node_nf=None,
         tanh=False,
         coords_range=5,
@@ -302,7 +369,6 @@ class EGNN(nn.Module):
         self.device = device
         self.n_layers = n_layers
         self.coords_range_layer = float(coords_range / n_layers)
-        self.norm_diff = norm_diff
         self.normalization_factor = normalization_factor
         self.aggregation_method = aggregation_method
 
@@ -325,7 +391,6 @@ class EGNN(nn.Module):
                     act_fn=act_fn,
                     n_layers=inv_sublayers,
                     attention=attention,
-                    norm_diff=norm_diff,
                     tanh=tanh,
                     coords_range=coords_range,
                     norm_constant=norm_constant,
@@ -361,6 +426,15 @@ class EGNN(nn.Module):
 
 
 class SinusoidsEmbeddingNew(nn.Module):
+    """# noqa
+    Sinusoidal embedding module for EGNN.
+
+    Args:
+        max_res (float): Maximum resolution.
+        min_res (float): Minimum resolution.
+        div_factor (int): Division factor.
+    """
+
     def __init__(self, max_res=15.0, min_res=15.0 / 2000.0, div_factor=4):
         super().__init__()
         self.n_frequencies = int(math.log(max_res / min_res, div_factor)) + 1
@@ -380,6 +454,18 @@ class SinusoidsEmbeddingNew(nn.Module):
 
 
 def coord2diff(x, edge_index, norm_constant=1):
+    """# noqa
+    Converts node coordinates to differences and radial distances.
+
+    Args:
+        x (Tensor): Node coordinates.
+        edge_index (Tensor): Edge indices.
+        norm_constant (int, optional): Normalization constant for coordinate differences.
+
+    Returns:
+        Tensor: Radial distances.
+        Tensor: Coordinate differences.
+    """
     row, col = edge_index
     coord_diff = x[row] - x[col]
     radial = torch.sum((coord_diff) ** 2, 1).unsqueeze(1)
@@ -392,16 +478,33 @@ def unsorted_segment_sum(
     data,
     segment_ids,
     num_segments,
-    normalization_factor,
-    aggregation_method: str,  # noqa
+    normalization_factor: int,
+    aggregation_method: str = "sum",  # noqa
 ):
-    """Custom PyTorch op to replicate TensorFlow's `unsorted_segment_sum`.
-    Normalization: 'sum' or 'mean'.
+    """# noqa
+    Performs unsorted segment sum operation with normalization.
+
+    Args:
+        data (Tensor): Data to be segmented.
+        segment_ids (Tensor): Indices indicating segments. rows
+        num_segments (int): Number of segments.
+        normalization_factor (int): Normalization factor for aggregation.
+        aggregation_method (str): Aggregation method ('sum' or 'mean').
+
+    Returns:
+        Tensor: Result of the operation.
     """
+
+    assert aggregation_method in [
+        "sum",
+        "mean",
+    ], "Please use either mean or sum, as they are permutation invariant aggregation functions"  # noqa
+
     result_shape = (num_segments, data.size(1))
     result = data.new_full(result_shape, 0)  # Init empty result tensor.
     segment_ids = segment_ids.unsqueeze(-1).expand(-1, data.size(1))
     result.scatter_add_(0, segment_ids, data)
+
     if aggregation_method == "sum":
         result = result / normalization_factor
 
@@ -413,16 +516,18 @@ def unsorted_segment_sum(
     return result
 
 
-def setup_device():
-    if torch.cuda.is_available():
-        device = torch.device("cuda")
-    else:
-        device = torch.device("cpu")
-    return device
-
-
 # Added extra to create the edges:
 def get_edges(n_nodes):
+    """# noqa
+    Generates edges for a graph with a given number of nodes.
+
+    Args:
+        n_nodes (int): Number of nodes.
+
+    Returns:
+        List: List of rows and columns representing edges.
+    """
+
     rows, cols = [], []
     for i in range(n_nodes):
         for j in range(n_nodes):
@@ -435,6 +540,16 @@ def get_edges(n_nodes):
 
 
 def get_edges_batch(n_nodes, batch_size):
+    """noqa
+    Generates edges for a batch of graphs with a given number of nodes.
+
+    Args:
+        n_nodes (int): Number of nodes in each graph.
+        batch_size (int): Batch size.
+
+    Returns:
+        Tuple: Edge information (edge indices and attributes).
+    """
     edges = get_edges(n_nodes)
     edge_attr = torch.ones(len(edges[0]) * batch_size, 1)
     edges = [torch.LongTensor(edges[0]), torch.LongTensor(edges[1])]
@@ -453,6 +568,17 @@ _edges_dict = {}
 
 
 def get_adj_matrix(n_nodes, batch_size, device):
+    """# noqa
+    Generates adjacency matrix for a batch of graphs with a given number of nodes.
+
+    Args:
+        n_nodes (int): Number of nodes in each graph.
+        batch_size (int): Batch size.
+        device (str): Device to run the operation on.
+
+    Returns:
+        Tuple: Edge information (edge indices and attributes).
+    """
     if n_nodes in _edges_dict:
         edges_dic_b = _edges_dict[n_nodes]
         if batch_size in edges_dic_b:

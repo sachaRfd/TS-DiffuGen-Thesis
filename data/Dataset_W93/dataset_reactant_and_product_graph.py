@@ -152,7 +152,7 @@ class QM90_TS_reactant_coords_and_product_graph(Dataset):
                 reactant_matrix = []
                 with open(os.path.join(path, file), "r") as read_file:
                     lines = read_file.readlines()
-                    for line in lines:
+                    for line in lines[2:]:
                         if self.remove_hydrogen:
                             # Check that the line is not Oxygens:
                             if line[0] != "H":
@@ -166,7 +166,7 @@ class QM90_TS_reactant_coords_and_product_graph(Dataset):
                 product_matrix = []
                 with open(os.path.join(path, file), "r") as read_file:
                     lines = read_file.readlines()
-                    for line in lines:
+                    for line in lines[2:]:
                         if self.remove_hydrogen:
                             if line[0] != "H":
                                 product_matrix.append(line.split())
@@ -179,7 +179,7 @@ class QM90_TS_reactant_coords_and_product_graph(Dataset):
                 ts_matrix = []
                 with open(os.path.join(path, file), "r") as read_file:
                     lines = read_file.readlines()
-                    for line in lines:
+                    for line in lines[2:]:
                         if self.remove_hydrogen:
                             if line[0] != "H":
                                 ts_matrix.append(line.split())

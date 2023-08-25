@@ -1,194 +1,78 @@
 import torch
 import numpy as np
-
-from data.Dataset_W93.dataset_class import W93_TS
-from torch_geometric.loader import DataLoader
-
-
-def sum_except_batch(x):
-    """# noqa
-    Sums the elements of each tensor in the input `x`, except the batch dimension.
-
-    Args:
-        x (torch.Tensor): Input tensor of shape (batch_size, *).
-
-    Returns:
-        torch.Tensor: A tensor of shape (batch_size,) containing the sum of elements in each tensor of `x`,
-                      excluding the batch dimension.
-    """
-    return x.reshape(x.size(0), -1).sum(dim=-1)
-
-
-def remove_mean_including_reactants_and_products(x):
-    """# noqa
-    Subtracts the mean of each row (excluding the One-Hot-Encoded atom types) from the corresponding row.
-
-    Args:
-        x (torch.Tensor): Input tensor of shape (batch_size, num_atoms, features).
-
-    Returns:
-        torch.Tensor: Tensor with mean-subtracted rows.
-
-    """
-
-    mean_reactant = torch.mean(x[:, :, 4:7], dim=1, keepdim=True)
-    mean_product = torch.mean(x[:, :, 7:10], dim=1, keepdim=True)
-    mean_ts = torch.mean(x[:, :, 10:13], dim=1, keepdim=True)
-
-    x[:, :, 4:7] = x[:, :, 4:7] - mean_reactant
-    x[:, :, 7:10] = x[:, :, 7:10] - mean_product
-    x[:, :, 10:13] = x[:, :, 10:13] - mean_ts
-
-    return x
-
-
-def remove_mean_just_ts(x):
-    assert x.shape[2] == 3
-    mean_ts = torch.mean(x, dim=1, keepdim=True)
-
-    x = x - mean_ts
-
-    return x
-
-
-def setup_device():
-    if torch.cuda.is_available():
-        device = torch.device("cuda")
-        print("Device is: ", device)
-    else:
-        device = torch.device("cpu")
-        print("Device is: ", device)
-
-    return device
+from src.EGNN.utils import remove_mean_with_mask
 
 
 def assert_mean_zero(x):
     """# noqa
-    Asserts that the mean of each row in the input tensor `x` (excluding the One-Hot-Encoded atom types) is approximately zero.
+    Asserts that the mean of each row in the input tensor `x` is approximately zero.
 
     Args:
         x (torch.Tensor): Input tensor of shape (batch_size, features).
 
     Raises:
-        AssertionError: If the absolute value of the maximum mean is greater than or equal to 1e-6.
+        AssertionError: If the absolute value of the maximum mean is >= 1e-6.
     """
     mean = torch.mean(x, dim=1, keepdim=True)
-    # print(mean.abs().max().item())
-    # print(mean.shape)
     mean = mean.abs().max().item()
-    # print(mean)
     assert mean < 1e-5
 
 
-def remove_mean_with_mask(x, node_mask):
-    masked_max_abs_value = (x * (1 - node_mask)).abs().sum().item()
-    assert masked_max_abs_value < 1e-5, f"Error {masked_max_abs_value} too high"  # noqa
-    N = node_mask.sum(1, keepdims=True)
-
-    mean = torch.sum(x, dim=1, keepdim=True) / N
-    x = x - mean * node_mask
-    return x
-
-
-def assert_correctly_masked(variable, node_mask):
-    assert (
-        variable * (1 - node_mask.to(variable.device))
-    ).abs().max().item() < 1e-4, "Variables not masked properly."
-
-
-def assert_mean_zero_with_mask(x, node_mask, eps=1e-10):
-    assert_correctly_masked(x, node_mask)
-    largest_value = x.abs().max().item()
-    error = torch.sum(x, dim=1, keepdim=True).abs().max().item()
-    rel_error = error / (largest_value + eps)
-    assert rel_error < 1e-2, f"Mean is not zero, relative_error {rel_error}"
-
-
 def sample_center_gravity_zero_gaussian_with_mask(size, device, node_mask):
+    """# noqa
+    Generates a tensor following a Gaussian distribution, centered at zero,
+    while considering a node mask.
+
+    Args:
+        size (tuple): Size of the tensor to generate (batch_size, num_nodes, features).
+        device (torch.device): Device for tensor placement.
+        node_mask (torch.Tensor): Node mask of shape (batch_size, num_nodes).
+
+    Returns:
+        x_projected (torch.Tensor): Generated tensor with masked center gravity.
+    """
     assert len(size) == 3
     x = torch.randn(size, device=device)
 
-    if len(node_mask.size()) == 2:  # Expand so that you can remove it from X
+    if len(node_mask.size()) == 2:
         node_mask = node_mask.unsqueeze(2).expand(size)
 
     x_masked = x * node_mask.to(device)
 
-    # This projection only works because Gaussian is rotation invariant around
-    # zero and samples are independent!
     x_projected = remove_mean_with_mask(x_masked, node_mask.to(device))
     return x_projected
 
 
-def sample_center_gravity_zero_gaussian(size, device):
-    """# noqa
-    Samples data from a zero-mean Gaussian distribution centered at the origin and projects it onto the space of transition states (TS).
-
-    Args:
-        size (tuple): Desired size of the sampled data in the format (batch_size, num_points, dimension).
-        device (str or torch.device): Device to run the sampling on (e.g., "cpu", "cuda").
-
-    Returns:
-        torch.Tensor: Sampled data with the same shape as the input size, but centered around the origin and projected onto the TS space.
-
-    Raises:
-        AssertionError: If the length of the size tuple is not 3.
-        AssertionError: If the third dimension of the size tuple is not 3, indicating that noise is only added to the TS.
-
-    """
-    assert len(size) == 3
-    assert size[2] == 3  # Check that we are only adding noise to TS
-
-    x = torch.randn(size, device=device)
-
-    # This projection only works because Gaussian is rotation invariant around
-    # zero and samples are independent!
-    x_projected = remove_mean_just_ts(x)
-    return x_projected
-
-
-def standard_gaussian_log_likelihood(x):
-    """# noqa
-    Computes the log-likelihood of a standard Gaussian distribution for a given input tensor.
-
-    No Euclidian Distances are accounted for here unlike the centred-gravity function above.
-
-    Args:
-        x (torch.Tensor): Input tensor.
-
-    Returns:
-        torch.Tensor: Log-likelihood of the standard Gaussian distribution.
-
-    """
-    assert len(x.size()) == 3  # Check 3D
-    assert x.shape[2] == 3  # Assert that we are only doing this for the TS
-    log_px = sum_except_batch(-0.5 * x * x - 0.5 * np.log(2 * np.pi))
-    return log_px
-
-
-def sample_gaussian(size, device):
-    """# noqa
-    Standard Gaussian Sampling - Whithout the removal of the centre of gravity --> NOT E(3) Equivariant.
-    """
-    assert len(size) == 3
-    assert size[2] == 3  # Check that we are only adding noise to TS
-
-    x = torch.randn(size, device=device)
-    return x
-
-
-# Rotation data augmntation
 def random_rotation(x, h):
     """# noqa
 
+
+    Algorithm:
+    1. Input sample with coordinates x and node features H
+    2. Seperate coordinates of reactant, product and TS
+    1. Sample random angle Theta
+    2. Rotate Reactant, product and TS coordinates depending on rotation matrix and angle Theta:
+    3. Return rotated coordinates and same node features
+
     Adapted from: https://github.com/ehoogeboom/e3_diffusion_for_molecules/blob/main/utils.py
 
+    Apply random rotations to 3D coordinates and corresponding reactant and product information.
 
-    Instead of Only taking X, it should also perform the rotations on the Reactant and Prodcut Coordinates
+    This function performs random rotations on input 3D coordinates along with associated reactant and product
+    information for data augmentation during training. It generates random rotation matrices around each axis,
+    applies these rotations to the input data, and returns the rotated data.
 
+    Args:
+        x (torch.Tensor): Input tensor of 3D coordinates with shape (batch_size, num_nodes, 3).
+        h (torch.Tensor): Input tensor containing additional information, including reactant and product details.
 
-    Perform Random Rotations during training to augment the model and train it on the rotation side of E(3)-Equivariance
-
+    Returns:
+        torch.Tensor, torch.Tensor: Rotated 3D coordinates tensor and updated information tensor.
     """
+
+    # assert that this is only possible with h vector of size 9 or 10:
+    assert h.shape[2] == 9 or h.shape[2] == 10
+
     bs, _, n_dims = x.size()
     device = x.device
     angle_range = np.pi * 2
@@ -199,7 +83,7 @@ def random_rotation(x, h):
 
     assert n_dims == 3  # Make sure we have 3D Coordinates
 
-    # Build Rx
+    # Build Rx: Rotations in X dimension
     Rx = torch.eye(3).unsqueeze(0).repeat(bs, 1, 1).to(device)
     theta = (
         torch.rand(bs, 1, 1).to(device) * angle_range - np.pi
@@ -244,6 +128,7 @@ def random_rotation(x, h):
 
     # Perform the rotation on the Reactant state
     reactant = reactant.transpose(1, 2)
+
     # Perform the rotation in X direction
     reactant = torch.matmul(Rx, reactant)
     # Perform the rotation in X direction
@@ -264,55 +149,58 @@ def random_rotation(x, h):
     # Transpose back the to the original shape
     product = product.transpose(1, 2)
 
+    # print(product)
+
     # Concatenate the reactant and product back together
-    h[:, :, -3:] = product
-    h[:, :, -6:-3] = reactant
+    h_rot = h.clone()
+    h_rot[:, :, -3:] = product
+    h_rot[:, :, -6:-3] = reactant
 
-    return x.contiguous(), h  # Returns contigous memory position
+    return x.contiguous(), h_rot.contiguous()
 
 
-if __name__ == "__main__":
-    print("Running Tests")
+# if __name__ == "__main__":
+# print("Running Tests")
 
-    # Let's check that all the above functions work as intended here !!!
-    dataset = W93_TS()
-    train_loader = DataLoader(dataset=dataset, batch_size=64, shuffle=True)
+# # Let's check that all the above functions work as intended here !!!
+# dataset = W93_TS()
+# train_loader = DataLoader(dataset=dataset, batch_size=64, shuffle=True)
 
-    example_sample = next(iter(train_loader))
+# example_sample = next(iter(train_loader))
 
-    # print(next(iter(train_loader)))
+# # print(next(iter(train_loader)))
 
-    # Now we can verify that each function works as intended:
+# # Now we can verify that each function works as intended:
 
-    # Sum_except_batch:
-    sum_batch = sum_except_batch(example_sample)
-    # print(sum_batch)
+# # Sum_except_batch:
+# sum_batch = sum_except_batch(example_sample)
+# # print(sum_batch)
 
-    # Remove Mean:
-    fake_batch_mean_removed = remove_mean_including_reactants_and_products(
-        example_sample
-    )
-    # print((fake_batch_mean_removed == example_sample).sum())
-    assert_mean_zero(fake_batch_mean_removed[:, :, 4:7])
+# # Remove Mean:
+# fake_batch_mean_removed = remove_mean_including_reactants_and_products(
+#     example_sample
+# )
+# # print((fake_batch_mean_removed == example_sample).sum())
+# assert_mean_zero(fake_batch_mean_removed[:, :, 4:7])
 
-    # Remove mean of TS:
-    TS_removed_mean = remove_mean_just_ts(example_sample[:, :, 10:13])
-    # print(TS_removed_mean)
+# # Remove mean of TS:
+# TS_removed_mean = remove_mean_just_ts(example_sample[:, :, 10:13])
+# # print(TS_removed_mean)
 
-    # Assert mean is 0 --> it should already be the case:
-    assert_mean_zero(example_sample[:, :, 4:7])
+# # Assert mean is 0 --> it should already be the case:
+# assert_mean_zero(example_sample[:, :, 4:7])
 
-    # Sample random gaussian like the shape of TS:
-    random_ts_noise = sample_center_gravity_zero_gaussian(
-        example_sample[:, :, 10:].shape, "cpu"
-    )
-    # print(random_ts_noise)
-    assert_mean_zero(random_ts_noise)
+# # Sample random gaussian like the shape of TS:
+# random_ts_noise = sample_center_gravity_zero_gaussian(
+#     example_sample[:, :, 10:].shape, "cpu"
+# )
+# # print(random_ts_noise)
+# assert_mean_zero(random_ts_noise)
 
-    # Testing the other Log likelihood function:
-    log_hood_2 = standard_gaussian_log_likelihood(example_sample[:, :, 10:])
-    # print(log_hood_2)
+# # Testing the other Log likelihood function:
+# log_hood_2 = standard_gaussian_log_likelihood(example_sample[:, :, 10:])
+# # print(log_hood_2)
 
-    # Testing the Rajdom gaussian sampling that is not centred on 0:
-    random_noise = sample_gaussian(example_sample[:, :, 10:13].shape, "cpu")
-    # assert_mean_zero(random_noise)  # Should cause an error
+# # Testing the Rajdom gaussian sampling that is not centred on 0:
+# random_noise = sample_gaussian(example_sample[:, :, 10:13].shape, "cpu")
+# # assert_mean_zero(random_noise)  # Should cause an error

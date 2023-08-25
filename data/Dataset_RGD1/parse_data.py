@@ -133,7 +133,7 @@ def checking_duplicates():
     )
 
 
-def save_reactions_with_multiple_ts():
+def save_reactions_with_multiple_ts(save_even_single=False):
     """# noqa
 
     - Function that finds reactions with multiple TS conformers (By looking at identical reaction strings)
@@ -147,7 +147,7 @@ def save_reactions_with_multiple_ts():
     hf = h5py.File("data/Dataset_RGD1/RGD1_CHNO.h5", "r")
 
     # Create a directory to save reactions with multiple TS
-    save_dir = "data/Dataset_RGD1/data/Multiple_TS/"
+    save_dir = "data/Dataset_RGD1/data/Single_and_Multiple_TS/"
     os.makedirs(save_dir, exist_ok=True)
 
     # Counter for processed reactions
@@ -163,6 +163,7 @@ def save_reactions_with_multiple_ts():
     for Rind, Rxn in tqdm(hf.items()):
         # if processed_reactions >= 1000:  # Process only the first 10 reactions    # noqa
         #     break
+
         # Parse SMILES strings
         Rsmiles = str(np.array(Rxn.get("Rsmiles")))
         Psmiles = str(np.array(Rxn.get("Psmiles")))
@@ -181,9 +182,6 @@ def save_reactions_with_multiple_ts():
 
         if reaction_smiles in unique_reactions:
             unique_reactions[reaction_smiles]["duplicate_indices"].append(Rind)
-            # unique_reactions[reaction_smiles]["elements"].append(elements)
-            # unique_reactions[reaction_smiles]["reactant_geometry"].append(R_G)
-            # unique_reactions[reaction_smiles]["product_geometry"].append(P_G)
             unique_reactions[reaction_smiles]["TS_geometry"].append(TS_G)
             unique_reactions[reaction_smiles]["activation_energy"].append(
                 activation_energy
@@ -209,24 +207,25 @@ def save_reactions_with_multiple_ts():
         print(duplicate_indices)
 
         # Check if there are multiple TS conformers for this reaction
-        if len(duplicate_indices) > 1:
-            print("There are duplicates")
-            # Create a directory for this reaction
-            # reaction_dir = os.path.join(
-            #     save_dir, f"Reaction_{reaction_info['duplicate_indices'][0]}"
-            # )  # noqa
+        if save_even_single:
+            threshold = 0
+        else:
+            threshold = 1
+        if (
+            len(duplicate_indices) > threshold
+        ):  # Should be 1 here for multiple BUT I CHANGED IT SO WE HAVE AT LEAST 1 SAMPLE FOR EACH REACTION # noqa
             reaction_dir = os.path.join(save_dir, f"Reaction_{reaction_count}")  # noqa
             reaction_count
             os.makedirs(reaction_dir, exist_ok=True)
 
             # Save the true reactant and true product geometries as .xyz files  # noqa
             save_xyz_file(
-                os.path.join(reaction_dir, "true_reactant.xyz"),
+                os.path.join(reaction_dir, "Reactant_geometry.xyz"),
                 reaction_info["elements"],
                 reaction_info["reactant_geometry"],
             )
             save_xyz_file(
-                os.path.join(reaction_dir, "true_product.xyz"),
+                os.path.join(reaction_dir, "Product_geometry.xyz"),
                 reaction_info["elements"],
                 reaction_info["product_geometry"],
             )
@@ -235,14 +234,23 @@ def save_reactions_with_multiple_ts():
             assert len(reaction_info["TS_geometry"]) == len(
                 reaction_info["activation_energy"]
             )
+            counter_ts = 0
             for ts, ae in zip(
                 reaction_info["TS_geometry"], reaction_info["activation_energy"]  # noqa
             ):
+                # This if statement is just so we have a sample that has no doubles # noqa
+                if counter_ts == 0:
+                    save_xyz_file(
+                        os.path.join(reaction_dir, "TS_geometry.xyz"),
+                        reaction_info["elements"],
+                        ts,
+                    )
                 save_xyz_file(
                     os.path.join(reaction_dir, f"ts_{ae}.xyz"),
                     reaction_info["elements"],
                     ts,
                 )
+                counter_ts += 1
             reaction_count += 1
 
 
@@ -250,4 +258,4 @@ if __name__ == "__main__":
     print("Running scripts")
     # main()
     # checking_duplicates()
-    # save_reactions_with_multiple_ts()
+    save_reactions_with_multiple_ts(save_even_single=True)

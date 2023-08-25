@@ -17,7 +17,21 @@ def setup_device():
 
 
 def sum_except_batch(x):
-    return x.reshape(x.size(0), -1).sum(dim=-1)
+    """# noqa
+    Sums the elements of each tensor in the input `x`, except the batch dimension.
+
+    Args:
+        x (torch.Tensor): Input tensor of shape (batch_size, *).
+
+    Returns:
+        torch.Tensor: A tensor of shape (batch_size,) containing the sum of elements in each tensor of `x`,
+                      excluding the batch dimension.
+    """
+    # Remove batch from dim
+    x = x.reshape(x.size(0), -1)
+    # Sum over all molecules/atoms
+    sum = x.sum(dim=-1)
+    return sum
 
 
 def remove_mean(x):

@@ -1,59 +1,56 @@
 """# noqa
-Script for EGNN denoising model: 
+Script for EGNN denoising model which only contains reactant coordinates and graph information about the product: 
 --------------------------------
 
 Code was adapted from https://github.com/ehoogeboom/e3_diffusion_for_molecules/blob/main/egnn/models.py
-
-Main adaptations: 
-    1. Clean code: 
-    2. Debugged and Cleaned:
-    - Removed un-used functions and classes
-    - Made redundant the updated features (using underscore)
-
-
-Scripts also contains code to sample from dataset and then add random noise to it to see if the model is able to predict it. 
 """
 
 import torch
 import torch.nn as nn
-from torch_geometric.loader import DataLoader
 from tqdm import tqdm
+from torch_geometric.loader import DataLoader
 import numpy as np
 from torch.utils.data.dataset import random_split
 
-from data.Dataset_W93.dataset_class import W93_TS
-from src.EGNN.egnn import EGNN
+from data.Dataset_W93.dataset_reactant_and_product_graph import (
+    QM90_TS_reactant_coords_and_product_graph,
+)
+from src_using_reaction_graphs.EGNN_product_graph.egnn_with_bond_info import (
+    EGNN_with_bond,
+)  # noqa
 from src.EGNN.utils import (
     remove_mean,
     remove_mean_with_mask,
     assert_mean_zero_with_mask,
     setup_device,
-)
+)  # noqa
 
 
-class EGNN_dynamics_QM9(nn.Module):
+class EGNN_dynamics(nn.Module):
     def __init__(
         self,
-        in_node_nf: int,
-        n_dims: int = 3,
-        out_node: int = 3,
-        hidden_nf: int = 64,
-        device: str = "cpu",
+        in_node_nf,
+        context_node_nf,
+        in_edge_nf,
+        n_dims,
+        out_node,
+        hidden_nf=64,
+        device="cpu",
         act_fn=torch.nn.SiLU(),
-        n_layers: int = 4,
-        attention: bool = True,
-        condition_time: bool = True,
-        tanh: bool = False,
-        norm_constant: int = 0,
-        inv_sublayers: int = 2,
-        sin_embedding: bool = False,
-        normalization_factor: int = 100,
-        aggregation_method: str = "sum",
+        n_layers=4,
+        attention=True,
+        condition_time=True,
+        tanh=False,
+        norm_constant=0,
+        inv_sublayers=2,
+        sin_embedding=False,
+        normalization_factor=100,
+        aggregation_method="sum",
     ):
         super().__init__()
-        self.egnn = EGNN(
-            in_node_nf=in_node_nf,
-            in_edge_nf=1,
+        self.egnn = EGNN_with_bond(
+            in_node_nf=in_node_nf + context_node_nf,
+            in_edge_nf=in_edge_nf,
             hidden_nf=hidden_nf,
             device=device,
             act_fn=act_fn,
@@ -70,28 +67,35 @@ class EGNN_dynamics_QM9(nn.Module):
         )
         self.in_node_nf = in_node_nf
 
+        self.context_node_nf = context_node_nf
         self.device = device
         self.n_dims = n_dims
         self._edges_dict = {}
         self.condition_time = condition_time
 
-    def forward(self, t, xh, node_mask, edge_mask, context=None):
+    def forward(self, t, xh, node_mask, edge_mask, context, edge_attributes):  # noqa
         raise NotImplementedError
 
-    def wrap_forward(self, node_mask, edge_mask, context):
+    def wrap_forward(self, node_mask, edge_mask, context, edge_attributes):
         def fwd(time, state):
-            return self._forward(time, state, node_mask, edge_mask, context)
+            return self._forward(
+                time, state, node_mask, edge_mask, context, edge_attributes
+            )
 
         return fwd
 
     def unwrap_forward(self):
         return self._forward
 
-    def _forward(self, t, xh, node_mask, edge_mask):
+    def _forward(self, t, xh, node_mask, edge_mask, context, edge_attributes):
         bs, n_nodes, dims = xh.shape
         h_dims = dims - self.n_dims
+
+        # Re-view the edge_attributes so they match the whole batch:
+        edge_attributes = edge_attributes.view(-1, 2)
+
         edges = self.get_adj_matrix(n_nodes, bs, self.device)
-        edges = [x.to(self.device) for x in edges]
+        edges = [x.to(self.device) for x in edges]  # Send edges to device
         node_mask = node_mask.view(bs * n_nodes, 1)
         edge_mask = edge_mask.view(bs * n_nodes * n_nodes, 1)
         xh = xh.view(bs * n_nodes, -1).clone() * node_mask
@@ -108,20 +112,20 @@ class EGNN_dynamics_QM9(nn.Module):
                 h_time = h_time.view(bs * n_nodes, 1)
             h = torch.cat([h, h_time], dim=1)
 
-        h_final, x_final = self.egnn(
+        if context is not None:
+            context = context.view(bs * n_nodes, self.context_node_nf)
+            h = torch.cat([h, context], dim=1)
+
+        # Here we ignore the h_final as we do not need it but keep in case of future use    # noqa
+        _, x_final = self.egnn(
             h.to(xh.device),
             x.to(xh.device),
             edges,
             node_mask=node_mask.to(xh.device),
             edge_mask=edge_mask.to(xh.device),
+            edge_attributes=edge_attributes.to(xh.device),
         )
-        vel = (
-            x_final - x
-        ) * node_mask  # This masking operation is redundant but just in case# noqa
-
-        if self.condition_time:
-            # Slice off last dimension which represented time.
-            h_final = h_final[:, :-1]
+        vel = (x_final - x) * node_mask
 
         vel = vel.view(bs, n_nodes, -1)
 
@@ -136,11 +140,7 @@ class EGNN_dynamics_QM9(nn.Module):
 
         assert_mean_zero_with_mask(vel, node_mask.view(bs, n_nodes, 1))
 
-        if h_dims == 0:
-            return vel
-        else:
-            h_final = h_final.view(bs, n_nodes, -1)
-            return h_final, vel
+        return _, vel
 
     def get_adj_matrix(self, n_nodes, batch_size, device):
         if n_nodes in self._edges_dict:
@@ -172,8 +172,7 @@ if __name__ == "__main__":
     device = setup_device()
 
     # Load the dataset:
-    direc = "data/Dataset_W93/data/Clean_Geometries"
-    dataset = W93_TS(directory=direc, graph=False)
+    dataset = QM90_TS_reactant_coords_and_product_graph(graph_product=True)
 
     # Calculate the sizes for each split
     dataset_size = len(dataset)
@@ -189,31 +188,29 @@ if __name__ == "__main__":
     batch_size = 64
 
     train_loader = DataLoader(
-        dataset=train_dataset,
-        batch_size=batch_size,
-        shuffle=True,
+        dataset=train_dataset, batch_size=batch_size, shuffle=True
     )
     val_loader = DataLoader(
-        dataset=val_dataset,
-        batch_size=batch_size,
-        shuffle=True,
-    )
+        dataset=val_dataset, batch_size=batch_size, shuffle=True
+    )  # noqa
     test_loader = DataLoader(
-        dataset=test_dataset,
-        batch_size=batch_size,
-        shuffle=True,
-    )
+        dataset=test_dataset, batch_size=batch_size, shuffle=True
+    )  # noqa
 
     in_node_nf = 10 + 1  # Number of h features
+
     out_node = 3
     context_nf = 0
-    n_dims = 3
+    n_dims = 3  # Dimension of the TS coordinates at each node (X, Y, Z)
+    in_edge_nf = 2  # 2 edge features given indside then we add the distance later --> But changed EGNN function    # noqa
 
-    model = EGNN_dynamics_QM9(
+    model = EGNN_dynamics(
         in_node_nf=in_node_nf,
+        context_node_nf=context_nf,
+        in_edge_nf=in_edge_nf,
         n_dims=n_dims,
         out_node=out_node,
-        sin_embedding=True,
+        sin_embedding=False,
         n_layers=5,
         device=device,
     )
@@ -224,24 +221,7 @@ if __name__ == "__main__":
     )  # noqa
     print(f"Number of Trainable Parameters is: {trainable_parameters}")
 
-    example_sample, node_masks = next(iter(train_loader))
-
-    # Setup an edge mask which represents all the possible connections between the atoms:# noqa
-    # add an edge mask which represents all the *possible* bonds between atoms
-    edge_mask = node_masks.unsqueeze(1) * node_masks.unsqueeze(2)
-
-    # Create mask for diagonal, as atoms cannot connect to themselves:
-    diag_mask = (
-        ~torch.eye(edge_mask.size(-1), device=edge_mask.device)
-        .unsqueeze(0)
-        .bool()  # noqa
-    )
-
-    # Expand to batch size:
-    diag_mask = diag_mask.expand(edge_mask.size())
-
-    # Multiply the edge mask by the diagonal mask to not have connections with itself:# noqa
-    edge_mask *= diag_mask
+    example_sample, node_masks, edge_attributes = next(iter(train_loader))
 
     # Setup a basic training:
     epochs = 60
@@ -253,7 +233,7 @@ if __name__ == "__main__":
         val_loss = 0
         model.train()
 
-        for batch, node_masks in tqdm(train_loader):
+        for batch, node_masks, edge_attributes in tqdm(train_loader):
             optimizer.zero_grad()
 
             batch.to(device)
@@ -275,7 +255,7 @@ if __name__ == "__main__":
 
             true_noise = remove_mean_with_mask(
                 true_noise,
-                node_masks.unsqueeze(2).expand(true_noise[:, :, -3:].size()),
+                node_masks.unsqueeze(2).expand(true_noise[:, :, -3:].size()),  # noqa
             )
             assert_mean_zero_with_mask(
                 true_noise[:, :, -3:],
@@ -294,7 +274,7 @@ if __name__ == "__main__":
 
             # Get the Edge mask:
             edge_mask = node_masks.unsqueeze(1) * node_masks.unsqueeze(2)
-            # Create mask for diagonal, as atoms cannot connect to themselves:
+            # Create mask for diagonal, as atoms cannot connect to themselves:  # noqa
             diag_mask = (
                 ~torch.eye(edge_mask.size(-1), device=edge_mask.device)
                 .unsqueeze(0)
@@ -307,11 +287,13 @@ if __name__ == "__main__":
 
             # Always the same timestep:
             t = torch.tensor([1]).to(device)
-            h_final, x_final = model._forward(
+            _, x_final = model._forward(
                 t=t,
                 xh=batch.to(device),
                 node_mask=node_masks.to(device),
                 edge_mask=edge_mask.to(device),
+                context=None,
+                edge_attributes=edge_attributes,
             )
             loss = loss_fn(x_final, true_noise.to(device))
             loss.backward()  # BackProp the loss

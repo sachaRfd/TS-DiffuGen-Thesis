@@ -134,7 +134,7 @@ class RGD1_TS(Dataset):
         assert os.path.exists(path)  # Assert the path Exists
 
         # Check that in the path there are the three files:
-        assert len(os.listdir(path)) == 3, "The folder is missing files."
+        # assert len(os.listdir(path)) == 3, "The folder is missing files."
 
         # Now we can extract the Reactant, Product, TS info:
         for file in os.listdir(path):

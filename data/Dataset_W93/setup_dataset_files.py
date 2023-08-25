@@ -158,6 +158,6 @@ if __name__ == "__main__":
         directory = args.directory
     else:
         # directory = "data/Dataset_W93/example_data_for_testing"
-        directory = "data/w93_dataset/data"
+        directory = "data/Dataset_W93/data"
 
     process_reactions(dataframe, directory)

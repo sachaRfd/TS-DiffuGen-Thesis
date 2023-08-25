@@ -43,7 +43,7 @@ if __name__ == "__main__":
     plt.xlabel("Timesteps")
     plt.title("Alphas vs. Timesteps")
     plt.legend()
-    plt.savefig("plots_and_images/alphas_t.png")
+    # plt.savefig("plots_and_images/alphas_t.png")
     plt.show()
 
     # Plot sigmas together
@@ -53,5 +53,5 @@ if __name__ == "__main__":
     plt.xlabel("Timesteps")
     plt.title("Sigmas vs. Timesteps")
     plt.legend()
-    plt.savefig("plots_and_images/sigmas_t.png")
+    # plt.savefig("plots_and_images/sigmas_t.png")
     plt.show()

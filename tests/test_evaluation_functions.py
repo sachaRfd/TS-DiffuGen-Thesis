@@ -10,6 +10,7 @@ from src.evaluate_samples import (
     evaluate,
 )
 from rdkit import Chem
+import pytest
 
 
 """
@@ -35,12 +36,10 @@ def test_get_paths():
     assert len(paths_generated[0]) == 2  # Two examples per mol
 
     # Test if you input WRONG path it gives error:
-    try:
+    with pytest.raises(AssertionError):
         wrong_path = "src/Incorrect_Path"
         paths_true, paths_generated = get_paths(wrong_path)
         assert False, "Expected AssertionError"
-    except AssertionError:
-        pass  # This is expected
 
 
 def test_imports_RMSD():
@@ -133,13 +132,11 @@ def test_DMAE():
         RMSD=False,
     )
     wrong_dist_matrix = calculate_distance_matrix(wrong_mol)
-    try:
+    with pytest.raises(AssertionError):
         dmae = calculate_DMAE(
             gen_mol=wrong_dist_matrix,
             true_mol=true_dist_matrix,
         )
-    except AssertionError:
-        pass  # This is expected
 
 
 def test_Best_RMSD():
@@ -166,15 +163,12 @@ def test_Best_RMSD():
         molecule_path=example_mol_path_wrong,
         RMSD=True,
     )
-
-    try:
+    with pytest.raises(AssertionError):
         rmse_without_h = calculate_best_rmse(
             gen_mol=wrong_mol,
             ref_mol=true_mol,
             max_iters=1,
         )
-    except AssertionError:
-        pass  # This is expected
 
 
 def test_RMSD_table():
@@ -210,15 +204,13 @@ def test_table_wrong_metric():
     true_mols, gen_mols = create_lists(path_to_samples, RMSD=False)
     max_iter = 1
 
-    try:
+    with pytest.raises(AssertionError):
         _ = create_table(
             true_mols=true_mols,
             gen_mols=gen_mols,
             max_iters=max_iter,
             metric="dmae",
         )
-    except AssertionError:
-        pass  # This is expected
 
 
 def test_evaluate():
@@ -226,16 +218,12 @@ def test_evaluate():
     evaluate(sample_path=path_to_samples, evaluation_type="DMAE")
 
     # Check if you give wrong evaluation_type you get error:
-    try:
+    with pytest.raises(AssertionError):
         evaluate(sample_path=path_to_samples, evaluation_type="rmsd")
-    except AssertionError:
-        pass
 
     # Check wrong path:
-    try:
+    with pytest.raises(AssertionError):
         evaluate(sample_path=path_to_samples + "x", evaluation_type="RMSD")
-    except AssertionError:
-        pass
 
 
 if __name__ == "__main__":

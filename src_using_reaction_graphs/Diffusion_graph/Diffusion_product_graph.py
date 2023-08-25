@@ -9,55 +9,80 @@ Adaptations:
 1. Cleaned whole script
     1.1 Removed unused functions and asserts
     1.2 Removed Variational-Lower-Bound Loss as not used
+    1.3 More
     1.4 Seperated functions for modularity
 2. Changed so Noising on H is not re-integrated into the model - as we are only trying to predict X part of xH     # noqa
 """
 
 import os
-
 import numpy as np
 import torch
 from torch.nn import functional as F
-import src.Diffusion.utils as diffusion_utils
-import src.EGNN.utils as EGNN_utils
+from src.Diffusion.utils import (
+    sample_center_gravity_zero_gaussian_with_mask,
+    assert_mean_zero,
+)
+from src.EGNN.utils import (
+    assert_mean_zero_with_mask,
+    remove_mean_with_mask,
+    setup_device,
+)
 from tqdm import tqdm
 from torch.nn import MSELoss
 import wandb
 from sklearn.model_selection import train_test_split
 
-from data.Dataset_W93.dataset_class import W93_TS
-from src.EGNN import dynamics
+from data.Dataset_W93.dataset_reactant_and_product_graph import (
+    QM90_TS_reactant_coords_and_product_graph,
+)
+
+from src_using_reaction_graphs.EGNN_product_graph.dynamics_with_graph import (
+    EGNN_dynamics,
+)
 from src.Diffusion.noising import PredefinedNoiseSchedule
 
 from torch.utils.data import DataLoader
-from torch import expm1
-from torch.nn.functional import softplus
+
+
+# Defining some useful util functions.
+def expm1(x: torch.Tensor) -> torch.Tensor:
+    return torch.expm1(x)
+
+
+def softplus(x: torch.Tensor) -> torch.Tensor:
+    return F.softplus(x)
+
+
+def sum_except_batch(x):
+    return x.view(x.size(0), -1).sum(-1)
 
 
 class DiffusionModel(torch.nn.Module):
     """
-    The E(n) Diffusion Module.
+    The E(n) Diffusion Class
     """
 
     def __init__(
         self,
-        dynamics: dynamics.EGNN_dynamics_QM9,
+        dynamics: EGNN_dynamics,
         in_node_nf: int,
-        n_dims: int = 3,
-        device: str = "cpu",
+        n_dims: int,
+        device="cpu",
         timesteps: int = 1000,
-        noise_schedule: str = "cosine",
-        noise_precision: float = 1e-4,
+        noise_schedule="cosine",
+        noise_precision=1e-4,
+        norm_values=(1.0, 1.0, 1.0),
+        norm_biases=(None, 0.0, 0.0),
     ):
         super().__init__()
 
-        # Setup CPU-GPU:
+        # Setup GPU:
         self.device = device
 
-        # MSE is used as the L_simple from paper:
+        # MSE is used as the Simplified Loss:
         self.mse = MSELoss()
 
-        # Setup the noise schedule and get Gamma Values:
+        # Setup the noise schedule:
         self.gamma = PredefinedNoiseSchedule(
             noise_schedule, timesteps=timesteps, precision=noise_precision
         )
@@ -73,7 +98,9 @@ class DiffusionModel(torch.nn.Module):
         # Number of Sampling Timesteps:
         self.T = timesteps
 
-        # Not sure what is the use.
+        # These variables are a bit Random/Useless in our case
+        self.norm_values = norm_values
+        self.norm_biases = norm_biases
         self.register_buffer("buffer", torch.zeros(1))
 
         # Check that the noise schedule allows for the total noising process to reach Gaussian Noise:# noqa
@@ -86,20 +113,25 @@ class DiffusionModel(torch.nn.Module):
 
         # Checked if 1 / norm_value is still larger than 10 * standard
         # deviation.
-        if sigma_0 * num_stdevs > 1.0:
-            raise ValueError("Please use larger amount of Timesteps")
+        max_norm_value = max(self.norm_values[1], self.norm_values[2])
 
-    def phi(self, x, t, node_mask, edge_mask):
-        """
-        Function to get Predicted noise
-        """
+        if sigma_0 * num_stdevs > 1.0 / max_norm_value:
+            raise ValueError(
+                f"Value for normalization value {max_norm_value} probably too "
+                f"large with sigma_0 {sigma_0:.5f} and "
+                f"1 / norm_value = {1. / max_norm_value}"
+            )
+
+    def phi(self, x, t, node_mask, edge_mask, context, edge_attributes):
         _, net_out = self.dynamics._forward(
             t,
             x,
             node_mask,
             edge_mask,
-        )  # Predicted H is USELESS IN our use-case
-        EGNN_utils.assert_mean_zero_with_mask(
+            context=context,
+            edge_attributes=edge_attributes,  # Predicted H is USELESS IN our use-case # noqa
+        )
+        assert_mean_zero_with_mask(
             net_out, node_mask.unsqueeze(2).expand(net_out.size())
         )
         return net_out
@@ -128,6 +160,13 @@ class DiffusionModel(torch.nn.Module):
         """Computes signal to noise ratio (alpha^2/sigma^2) given gamma."""
         return torch.exp(-gamma)
 
+    def subspace_dimensionality(self, node_mask):
+        """Compute the dimensionality on translation-invariant linear subspace where distributions on x are defined."""  # noqa
+        number_of_nodes = torch.sum(
+            node_mask.squeeze(1), dim=1
+        )  # Changed from squeeze(2)
+        return (number_of_nodes - 1) * self.n_dims
+
     def sigma_and_alpha_t_given_s(
         self,
         gamma_t: torch.Tensor,
@@ -145,17 +184,18 @@ class DiffusionModel(torch.nn.Module):
             -expm1(softplus(gamma_s) - softplus(gamma_t)), target_tensor
         )
 
+        # alpha_t_given_s = alpha_t / alpha_s
         log_alpha2_t = F.logsigmoid(-gamma_t)
         log_alpha2_s = F.logsigmoid(-gamma_s)
         log_alpha2_t_given_s = log_alpha2_t - log_alpha2_s
 
         alpha_t_given_s = torch.exp(0.5 * log_alpha2_t_given_s)
         alpha_t_given_s = self.inflate_batch_array(
-            alpha_t_given_s,
-            target_tensor,
-        )
+            alpha_t_given_s, target_tensor
+        )  # noqa
 
         sigma_t_given_s = torch.sqrt(sigma2_t_given_s)
+
         return sigma2_t_given_s, sigma_t_given_s, alpha_t_given_s
 
     def compute_x_pred(self, net_out, zt, gamma_t, final=False):
@@ -168,8 +208,8 @@ class DiffusionModel(torch.nn.Module):
         )  # This is from the prediction formula fron noise to prediction value
         return x_pred
 
-    def compute_error(self, net_out, eps):
-        """Computes the error (MSE) between the true and predicted noise"""
+    def compute_error(self, net_out, gamma_t, eps):
+        """Computes error, i.e. the most likely prediction of x."""
         error = self.mse(eps, net_out)
         return error
 
@@ -193,7 +233,15 @@ class DiffusionModel(torch.nn.Module):
             -log_sigma_x.to(self.device) - 0.5 * np.log(2 * np.pi)
         )
 
-    def sample_p_xh_given_z0(self, z0, node_mask, edge_mask, fix_noise=False):
+    def sample_p_xh_given_z0(
+        self,
+        z0,
+        node_mask,
+        edge_mask,
+        context=None,
+        edge_attributes=None,
+        fix_noise=False,
+    ):
         """Samples x ~ p(x|z0)."""
         zeros = torch.zeros(size=(z0.size(0), 1), device=z0.device)
         gamma_0 = self.gamma(zeros)
@@ -206,6 +254,8 @@ class DiffusionModel(torch.nn.Module):
             x=z0,
             node_mask=node_mask,
             edge_mask=edge_mask,
+            context=context,
+            edge_attributes=edge_attributes,
         )
 
         # Compute mu for p(zs | zt).
@@ -228,21 +278,25 @@ class DiffusionModel(torch.nn.Module):
         """Samples from a Normal distribution."""
         bs = 1 if fix_noise else mu.size(0)
         eps = self.sample_position(bs, mu.size(1), node_mask)
-
         return mu + sigma * eps
 
     def sample_position(self, n_samples, n_nodes, node_mask):
         """
         Samples mean-centered normal noise for z_x.
         """
-        z_x = diffusion_utils.sample_center_gravity_zero_gaussian_with_mask(
+        z_x = sample_center_gravity_zero_gaussian_with_mask(
             size=(n_samples, n_nodes, self.n_dims),
             device=self.device,
             node_mask=node_mask,
         )
+        assert_mean_zero_with_mask(
+            z_x, node_mask.unsqueeze(2).expand(z_x.size())
+        )  # noqa
         return z_x
 
-    def compute_loss(self, x, h, node_mask, edge_mask, t0_always):
+    def compute_loss(
+        self, x, h, node_mask, edge_mask, context, edge_attributes, t0_always
+    ):
         """Computes an estimator for the variational lower bound, or the simple loss (MSE)."""  # noqa
 
         # This part is about whether to include loss term 0 always.
@@ -281,7 +335,7 @@ class DiffusionModel(torch.nn.Module):
             self.device
         ) * eps.to(self.device)
 
-        EGNN_utils.assert_mean_zero_with_mask(
+        assert_mean_zero_with_mask(
             z_t, node_mask.unsqueeze(2).expand(z_t.size()).to(self.device)
         )
 
@@ -294,18 +348,38 @@ class DiffusionModel(torch.nn.Module):
             t.to(self.device),
             node_mask.to(self.device),
             edge_mask.to(self.device),
+            context,
+            edge_attributes,
         )
 
         # Compute the error.
-        error = self.compute_error(net_out, eps)
+        error = self.compute_error(net_out, gamma_t, eps)
 
         return error
 
-    def forward(self, x, h, node_mask=None, edge_mask=None):
+    def forward(
+        self,
+        x,
+        h,
+        node_mask=None,
+        edge_mask=None,
+        context=None,
+        edge_attributes=None,  # Include Edge Attributes
+    ):
         """
         Computes the loss (type l2 or NLL) if training. And if eval then always computes NLL.           # noqa
         """
-        loss = self.compute_loss(x, h, node_mask, edge_mask, t0_always=False)
+        # Normalize data, take into account volume change in x.
+
+        loss = self.compute_loss(
+            x,
+            h,
+            node_mask,
+            edge_mask,
+            context=None,
+            edge_attributes=edge_attributes,
+            t0_always=False,
+        )
 
         neg_log_pxh = loss
 
@@ -321,6 +395,8 @@ class DiffusionModel(torch.nn.Module):
         zt,
         node_mask,
         edge_mask,
+        context=None,
+        edge_attributes=None,
         fix_noise=False,
     ):
         """Samples from zs ~ p(zs | zt). Only used during sampling."""
@@ -337,13 +413,13 @@ class DiffusionModel(torch.nn.Module):
         sigma_t = self.sigma(gamma_t, target_tensor=zt)
 
         # Neural net prediction.
-        eps_t = self.phi(zt, t, node_mask, edge_mask)
+        eps_t = self.phi(zt, t, node_mask, edge_mask, context, edge_attributes)
 
         # Compute mu for p(zs | zt).
-        EGNN_utils.assert_mean_zero_with_mask(
+        assert_mean_zero_with_mask(
             zt[:, :, -3:], node_mask.unsqueeze(2).expand(zt[:, :, -3:].size())
         )
-        EGNN_utils.assert_mean_zero_with_mask(
+        assert_mean_zero_with_mask(
             eps_t[:, :, -3:],
             node_mask.unsqueeze(2).expand(eps_t[:, :, -3:].size()),  # noqa
         )
@@ -371,7 +447,7 @@ class DiffusionModel(torch.nn.Module):
         zs = torch.cat(
             [
                 zt[:, :, :-3].to(self.device),
-                EGNN_utils.remove_mean_with_mask(
+                remove_mean_with_mask(
                     zs[:, :, -3:],
                     node_mask.unsqueeze(2).expand(zs[:, :, -3:].size()),  # noqa
                 ).to(self.device),
@@ -384,10 +460,12 @@ class DiffusionModel(torch.nn.Module):
     def sample(
         self,
         h,
+        edge_attributes,
         n_samples,
         n_nodes,
         node_mask,
         edge_mask,
+        context=None,
         context_size=0,
         fix_noise=False,
     ):
@@ -408,25 +486,22 @@ class DiffusionModel(torch.nn.Module):
         z = torch.cat([predefined_h.to(self.device), z.to(self.device)], dim=2)
 
         # Check the coordinates have zero mean
-        EGNN_utils.assert_mean_zero_with_mask(
+        assert_mean_zero_with_mask(
             z[:, :, -3:], node_mask.unsqueeze(2).expand(z[:, :, -3:].size())
         )
-
-        # Assert that the product is centred
-        EGNN_utils.assert_mean_zero_with_mask(
-            z[:, :, 7 + context_size : 10 + context_size],  # noqa
-            node_mask.unsqueeze(2).expand(
-                z[:, :, 7 + context_size : 10 + context_size].size()  # noqa
-            ),
-        )
-
-        # Assert that the reactant is centred
-        EGNN_utils.assert_mean_zero_with_mask(
-            z[:, :, 4 + context_size : 7 + context_size],  # noqa
-            node_mask.unsqueeze(2).expand(
-                z[:, :, 4 + context_size : 7 + context_size].size()  # noqa
-            ),
-        )
+        # Currently are not using Reactant or product
+        # assert_mean_zero_with_mask(
+        #     z[:, :, 7 + context_size : 10 + context_size],  # noqa
+        #     node_mask.unsqueeze(2).expand(
+        #         z[:, :, 7 + context_size : 10 + context_size].size()  # noqa
+        #     ),
+        # )
+        # assert_mean_zero_with_mask(
+        #     z[:, :, 4 + context_size : 7 + context_size],  # noqa
+        #     node_mask.unsqueeze(2).expand(
+        #         z[:, :, 4 + context_size : 7 + context_size].size()  # noqa
+        #     ),
+        # )
 
         # Iteratively sample p(z_s | z_t) for t = 1, ..., T, with s = t - 1.
         for s in reversed(range(0, self.T)):
@@ -441,6 +516,9 @@ class DiffusionModel(torch.nn.Module):
                 z.to(self.device),
                 node_mask.to(self.device),
                 edge_mask.to(self.device),
+                context,
+                edge_attributes,
+                fix_noise=fix_noise,
             )
 
         # Finally sample p(x, h | z_0).
@@ -448,11 +526,12 @@ class DiffusionModel(torch.nn.Module):
             z,
             node_mask.to(self.device),
             edge_mask.to(self.device),
+            context,
+            edge_attributes,
+            fix_noise=fix_noise,
         )
 
-        EGNN_utils.assert_mean_zero_with_mask(
-            x, node_mask.unsqueeze(2).expand(x.size())
-        )
+        assert_mean_zero_with_mask(x, node_mask.unsqueeze(2).expand(x.size()))
 
         max_cog = torch.sum(x, dim=1, keepdim=True).abs().max().item()
         if max_cog > 5e-2:
@@ -460,22 +539,24 @@ class DiffusionModel(torch.nn.Module):
                 f"Warning cog drift with error {max_cog:.3f}. Projecting "
                 f"the positions down."
             )
-            x = diffusion_utils.remove_mean_with_mask(
+            x = remove_mean_with_mask(
                 x, node_mask.unsqueeze(2).expand(x.size())
-            )
-
+            )  # noqa
         return x
 
     @torch.no_grad()
     def sample_chain(
         self,
         h,
+        edge_attributes,
         n_samples,
         n_nodes,
         node_mask,
         edge_mask,
         keep_frames=None,
+        context=None,
         context_size=0,
+        fix_noise=False,
     ):
         """
         Draw samples from the generative model, keep the intermediate states for visualization purposes.# noqa
@@ -485,31 +566,10 @@ class DiffusionModel(torch.nn.Module):
 
         z = self.sample_position(n_samples, n_nodes, node_mask)
 
-        diffusion_utils.assert_mean_zero(z[:, :, -3:])  # noqa
+        assert_mean_zero(z[:, :, -3:])  # noqa
 
         # Concatenate predefined H:
         z = torch.cat([predefined_h, z], dim=2)
-
-        # Check the coordinates have zero mean
-        EGNN_utils.assert_mean_zero_with_mask(
-            z[:, :, -3:], node_mask.unsqueeze(2).expand(z[:, :, -3:].size())
-        )
-
-        # Assert that the product is centred
-        EGNN_utils.assert_mean_zero_with_mask(
-            z[:, :, 7 + context_size : 10 + context_size],  # noqa
-            node_mask.unsqueeze(2).expand(
-                z[:, :, 7 + context_size : 10 + context_size].size()  # noqa
-            ),
-        )
-
-        # Assert that the reactant is centred
-        EGNN_utils.assert_mean_zero_with_mask(
-            z[:, :, 4 + context_size : 7 + context_size],  # noqa
-            node_mask.unsqueeze(2).expand(
-                z[:, :, 4 + context_size : 7 + context_size].size()  # noqa
-            ),
-        )
 
         if keep_frames is None:
             keep_frames = self.T
@@ -530,9 +590,11 @@ class DiffusionModel(torch.nn.Module):
                 z.to(self.device),
                 node_mask.to(self.device),
                 edge_mask.to(self.device),
+                context,
+                edge_attributes,
             )
 
-            diffusion_utils.assert_mean_zero(z[:, :, -3:])
+            assert_mean_zero(z[:, :, -3:])
 
             # Write to chain tensor
             write_index = (s * keep_frames) // self.T
@@ -540,10 +602,14 @@ class DiffusionModel(torch.nn.Module):
 
         # Finally sample p(x, h | z_0).
         x = self.sample_p_xh_given_z0(
-            z, node_mask.to(self.device), edge_mask.to(self.device)
+            z,
+            node_mask.to(self.device),
+            edge_mask.to(self.device),
+            context,
+            edge_attributes,
         )
 
-        diffusion_utils.assert_mean_zero(x[:, :, -3:])
+        assert_mean_zero(x[:, :, -3:])
 
         xh = torch.cat([h, x], dim=2)
         chain[0] = xh  # Overwrite last frame with the resulting x and h.
@@ -553,128 +619,92 @@ class DiffusionModel(torch.nn.Module):
         return chain_flat
 
 
-def get_node_features(remove_hydrogens, include_context, no_product=False):
-    """# noqa
-    Function that returns the correct variables depending on variables used
-
-    If hydrogens are kept:
-    h = [OHE_1, OHE_2, OHE_3, OHE_4, Rx, Ry, Rz, Px, Py, Pz] + [t] --> 11
-    else:
-    h = [OHE_1, OHE_2, OHE_3, Rx, Ry, Rz, Px, Py, Pz] + [t] --> 10
-
-    If context is included:
-    h = [OHE_1, OHE_2, OHE_3, OHE_4, Context, Rx, Ry, Rz, Px, Py, Pz] + [t] --> 10 or 11 + 1
-
-    If No_product:
-    h = [OHE_1, OHE_2, OHE_3, OHE_4, Context, Rx, Ry, Rz] + [t] --> 10 or 8 + 1
-
-
-    remove_hydrogens: If hydrogens have been removed --> Should not include a 4d OHE
-    Include context: Should add 1 dimension for the context information
-
-    """
-    #  Time embedding is added:
-    if remove_hydrogens:
-        in_node_nf = 10
-    else:
-        in_node_nf = 11
-
-    if include_context:
-        in_node_nf += 1
-
-    if no_product:
-        in_node_nf -= 3
-    return in_node_nf
-
-
 if __name__ == "__main__":
     print("running script")
 
     # Setup the device:
-    device = dynamics.setup_device()
-    # device = "cpu"
+    device = setup_device()
 
     remove_hydrogens = False
     include_context = False
 
-    # # if remove_hydrogens:
-    # #     in_node_nf = 9 + 1  # To account for time and 1 less OHE
-    # # else:
-    # #     in_node_nf = 10 + 1  # To account for time
+    if remove_hydrogens:
+        in_node_nf = 9 + 1  # To account for time and 1 less OHE
+    else:
+        in_node_nf = 10 + 1  # To account for time
 
-    # if include_context:
-    #     in_node_nf += 1
+    if include_context:
+        in_node_nf += 1
 
-    in_node_nf = get_node_features(
-        remove_hydrogens=remove_hydrogens, include_context=include_context
-    )
+    context = None
 
-    # out_node = 3
-    # n_dims = 3
-    noise_schedule = "cosine"
+    # One Important variable for graph input
+    in_edge_nf = 2  # 2 edge features given indside then we add the distance later --> But changed EGNN function    # noqa
+
+    out_node = 3
+    context_nf = 0
+    n_dims = 3
+    noise_schedule = "sigmoid_2"
     timesteps = 2_000
     batch_size = 64
-    n_layers = 3
+    n_layers = 8
     hidden_features = 64
-    lr = 8e-4
+    lr = 4e-4
     epochs = 100
 
     # Setup for clear model Tracking:
     model_name = f"{n_layers}_layers_{hidden_features}_hiddenfeatures_{lr}_lr_{noise_schedule}_{timesteps}_timesteps_{batch_size}_batch_size_{epochs}_epochs_{remove_hydrogens}_Rem_Hydrogens"  # noqa
-    folder_name = "Diffusion/Clean/" + model_name + "/"
+    folder_name = "Diffusion/weights_and_samples/" + model_name + "/"
 
-    # # Setup WandB:
-    # wandb.init(project="Diffusion_context_test", name=model_name)
-    # wandb.config.name = model_name
-    # wandb.config.batch_size = batch_size
-    # wandb.config.epochs = epochs
-    # wandb.config.lr = lr
-    # wandb.config.hidden_node_features = hidden_features
-    # wandb.config.number_of_layers = n_layers
+    # Setup WandB:
+    wandb.init(project="Diffusion_including_bond_info", name=model_name)
+    wandb.config.name = model_name
+    wandb.config.batch_size = batch_size
+    wandb.config.epochs = epochs
+    wandb.config.lr = lr
+    wandb.config.hidden_node_features = hidden_features
+    wandb.config.number_of_layers = n_layers
 
-    denoising_model = dynamics.EGNN_dynamics_QM9(
+    denoising_model = EGNN_dynamics(
         in_node_nf=in_node_nf,
-        hidden_nf=hidden_features,
-        sin_embedding=True,
-        n_layers=n_layers,
+        context_node_nf=context_nf,
+        in_edge_nf=in_edge_nf,
+        n_dims=n_dims,
+        out_node=out_node,
+        sin_embedding=False,
+        n_layers=5,
         device=device,
     )
-
-    dataset = W93_TS(
+    dataset = QM90_TS_reactant_coords_and_product_graph(
         remove_hydrogens=remove_hydrogens,
         include_context=include_context,
+        graph_product=True,
     )
 
-    # Calculate the sizes for each split
+    # Split dataset: 8:1:1
     train_dataset, test_dataset = train_test_split(
         dataset, test_size=0.3, random_state=42
     )
-
-    # Splitting the train dataset into train and validation sets
     train_dataset, val_dataset = train_test_split(
         train_dataset, test_size=0.1, random_state=42
     )
 
     # Create DataLoaders
     train_loader = DataLoader(
-        dataset=train_dataset,
-        batch_size=batch_size,
-        shuffle=True,
+        dataset=train_dataset, batch_size=batch_size, shuffle=True
     )
     val_loader = DataLoader(
-        dataset=val_dataset,
-        batch_size=batch_size,
-        shuffle=True,
-    )
+        dataset=val_dataset, batch_size=batch_size, shuffle=True
+    )  # noqa
     test_loader = DataLoader(
-        dataset=test_dataset,
-        batch_size=batch_size,
+        dataset=test_dataset, batch_size=batch_size
     )  # Not shuffled so that we can visualise the same samples
 
     # Setup the diffusion model:
     diffusion_model = DiffusionModel(
         dynamics=denoising_model,
         in_node_nf=in_node_nf,
+        n_dims=n_dims,
         timesteps=timesteps,
         device=device,
         noise_schedule=noise_schedule,
@@ -690,12 +720,12 @@ if __name__ == "__main__":
 
         # Setup training mode:
         diffusion_model.train()
-        for batch, node_mask in tqdm(train_loader):
+        for batch, node_mask, edge_attributes in tqdm(train_loader):
             # Check that the values are centred:
-            # diffusion_utils.assert_mean_zero_with_mask(
-            #     batch[:, :, -3:],
-            #     node_mask.unsqueeze(2).expand(batch[:, :, -3:].size()),  # noqa
-            # )
+            assert_mean_zero_with_mask(
+                batch[:, :, -3:],
+                node_mask.unsqueeze(2).expand(batch[:, :, -3:].size()),  # noqa
+            )
 
             optimiser.zero_grad()
 
@@ -723,7 +753,9 @@ if __name__ == "__main__":
                 x.to(device),
                 h.to(device),
                 node_mask.to(device),
-                edge_mask.to(device),  # noqa
+                edge_mask.to(device),
+                context,
+                edge_attributes.to(device),
             )
 
             loss = nll.to(device)
@@ -740,7 +772,7 @@ if __name__ == "__main__":
         # Setup Validation part:
         diffusion_model.eval()
         with torch.no_grad():
-            for batch, node_mask in tqdm(val_loader):
+            for batch, node_mask, edge_attributes in tqdm(val_loader):
                 h = batch[:, :, :-3].to(device)
                 x = batch[:, :, -3:].to(device)
 
@@ -766,6 +798,8 @@ if __name__ == "__main__":
                     h.to(device),
                     node_mask.to(device),
                     edge_mask.to(device),
+                    context,
+                    edge_attributes.to(device),
                 )
                 loss = nll.to(device)
                 total_val_loss += nll
@@ -774,48 +808,11 @@ if __name__ == "__main__":
         print(f"At epoch {epoch} \t Val Loss = {total_val_loss}")
         wandb.log({"val_loss": total_val_loss})
 
-    # Test the whole test set:
-    total_test_loss = 0
-    diffusion_model.eval()
-    with torch.no_grad():
-        for batch, node_mask in tqdm(test_loader):
-            h = batch[:, :, :-3].to(device)
-            x = batch[:, :, -3:].to(device)
-
-            # setup the edge_mask:
-            edge_mask = node_mask.unsqueeze(1) * node_mask.unsqueeze(2)
-
-            # Create mask for diagonal, as atoms cannot connect to themselves:
-            diag_mask = (
-                ~torch.eye(edge_mask.size(-1), device=edge_mask.device)
-                .unsqueeze(0)
-                .bool()
-            )
-
-            # Expand to batch size:
-            diag_mask = diag_mask.expand(edge_mask.size())
-
-            # Multiply the edge mask by the diagonal mask to not have connections with itself:# noqa
-            edge_mask *= diag_mask
-
-            # Calculate the loss:
-            nll = diffusion_model(
-                x.to(device),
-                h.to(device),
-                node_mask.to(device),
-                edge_mask.to(device),  # noqa
-            )
-            loss = nll.to(device)
-            total_test_loss += nll
-
-    total_test_loss /= len(val_loader)
-    print(f"Total MSE Test Loss is:\t{total_test_loss}\n")
-
     # Save the model:
     if not os.path.exists(folder_name):
         os.makedirs(folder_name)
 
-    model_path = folder_name + f"Weights_Test_MSE_{total_test_loss:.3f}/"
+    model_path = folder_name + "Weights/"
     sample_path = folder_name + "Samples/"
 
     if not os.path.exists(model_path):

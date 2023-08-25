@@ -242,7 +242,7 @@ def create_table(true_mols, gen_mols, max_iters=1, metric="RMSD"):
         if metric == "DMAE":
             true_molecule_dist_matrix = calculate_distance_matrix(true_mol)
 
-        for gen_mol in gen_sample:
+        for gen_mol in gen_sample:  # [5:]:
             if metric == "RMSD":
                 value = calculate_best_rmse(gen_mol, true_mol, max_iters)
             elif metric == "DMAE":

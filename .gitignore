@@ -5,6 +5,9 @@
 __pycache__/
 .vscode
 
+
+
+
 # Ignore all __pycache__ folders in the entire project
 **/__pycache__/
 
@@ -16,9 +19,6 @@ src/Diffusion/Clean_lightning/*
 src/Diffusion/Notebooks
 src/Diffusion/RGD1_dataset_weights/
 
-# Ignore the scripts for reactants only:
-src_coords_graphs/old_reactant_only_code
-src_coords_graphs/weights_and_samples/
 
 
 weights_and_samples/
@@ -26,6 +26,10 @@ data/Dataset_W93/stereo_mols
 data/Dataset_W93/ONE_stereo_centres
 data/Dataset_RGD1/data/Clean_Geometries/
 data/Dataset_RGD1/data/Multiple_TS/
+data/Dataset_RGD1/data/Single_and_Multiple_TS/
+data/Dataset_RGD1/Example_reaction_pngs/
+
+
 
 
 # Ignore Build stuff: 

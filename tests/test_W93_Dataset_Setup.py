@@ -81,7 +81,6 @@ def test_pdb_from_log():
 
 def test_process_reactions():
     temp_dir = "data/Dataset_W93/example_data_for_testing"
-    # os.makedirs(temp_dir + "/TS/wb97xd3/", exist_ok=True)
 
     try:
         process_reactions(example_dataframe, temp_dir)
