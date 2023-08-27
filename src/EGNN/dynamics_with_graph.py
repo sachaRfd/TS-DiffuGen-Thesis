@@ -17,9 +17,8 @@ from torch.utils.data.dataset import random_split
 from data.Dataset_W93.dataset_reactant_and_product_graph import (
     QM90_TS_reactant_coords_and_product_graph,
 )
-from src_using_reaction_graphs.EGNN_product_graph.egnn_with_bond_info import (
-    EGNN_with_bond,
-)
+
+from src.EGNN.egnn_with_bond_info import EGNN_with_bond
 from src.EGNN.utils import (
     remove_mean,
     remove_mean_with_mask,
