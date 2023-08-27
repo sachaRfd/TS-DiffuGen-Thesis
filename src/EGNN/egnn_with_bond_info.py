@@ -24,7 +24,7 @@ from src.EGNN.egnn import (
 )
 
 from data.Dataset_W93.dataset_reactant_and_product_graph import (
-    QM90_TS_reactant_coords_and_product_graph,
+    W93_TS_coords_and_reacion_graph,
 )
 
 
@@ -168,7 +168,7 @@ class EGNN_with_bond(nn.Module):
 if __name__ == "__main__":
     print("Running Script")
 
-    dataset = QM90_TS_reactant_coords_and_product_graph(graph_product=True)  # noqa
+    dataset = W93_TS_coords_and_reacion_graph(graph_product=True)  # noqa
 
     # Calculate the sizes for each split
     dataset_size = len(dataset)

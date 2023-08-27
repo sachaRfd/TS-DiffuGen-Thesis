@@ -25,7 +25,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from data.Dataset_W93.dataset_class import W93_TS
 from data.Dataset_W93.dataset_reactant_and_product_graph import (
-    QM90_TS_reactant_coords_and_product_graph,
+    W93_TS_coords_and_reacion_graph,
 )
 from data.Dataset_TX1.dataset_TX1_class import TX1_dataset
 from data.Dataset_RGD1.RGD1_dataset_class import RGD1_TS
@@ -635,7 +635,7 @@ class LitDiffusionModel_With_graph(pl.LightningModule):
             self.save_path = save_path
 
         # Setup the dataset:
-        self.dataset = QM90_TS_reactant_coords_and_product_graph(
+        self.dataset = W93_TS_coords_and_reacion_graph(
             graph_product=True,
         )
         # Split into 8:1:1 ratio:
