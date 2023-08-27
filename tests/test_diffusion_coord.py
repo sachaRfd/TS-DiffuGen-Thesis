@@ -1,4 +1,4 @@
-from src.Diffusion.Equivariant_Diffusion import (
+from src.Diffusion.equivariant_diffusion import (
     get_node_features,
     DiffusionModel,
 )

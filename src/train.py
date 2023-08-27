@@ -6,18 +6,27 @@ from torch.utils.data import DataLoader
 import wandb
 
 
-from src.Diffusion.Equivariant_Diffusion import (
+from src.Diffusion.equivariant_diffusion import (
     DiffusionModel,
+    DiffusionModel_graph,
     get_node_features,
 )
+
+
 from src.Diffusion.saving_sampling_functions import write_xyz_file, return_xyz
 from src.Diffusion.utils import random_rotation
 from src.EGNN import dynamics
+from src.EGNN.dynamics_with_graph import (
+    EGNN_dynamics_graph,
+)
 from sklearn.model_selection import train_test_split
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 from data.Dataset_W93.dataset_class import W93_TS
+from data.Dataset_W93.dataset_reactant_and_product_graph import (
+    QM90_TS_reactant_coords_and_product_graph,
+)
 from data.Dataset_TX1.dataset_TX1_class import TX1_dataset
 from data.Dataset_RGD1.RGD1_dataset_class import RGD1_TS
 
@@ -590,11 +599,372 @@ class LitDiffusionModel(pl.LightningModule):
             )
 
 
+class LitDiffusionModel_With_graph(pl.LightningModule):
+    def __init__(
+        self,
+        in_node_nf,
+        in_edge_nf,
+        hidden_features,
+        n_layers,
+        device,
+        lr,
+        test_sampling_number,
+        save_samples,
+        save_path,
+        timesteps,
+        noise_schedule,
+        learning_rate_schedule=False,
+        no_product=False,
+        batch_size=64,
+        pytest_time=False,
+    ):
+        super(LitDiffusionModel_With_graph, self).__init__()
+        self.pytest_time = pytest_time
+        self.batch_size = batch_size
+        self.lr = lr
+        self.learning_rate_schedule = learning_rate_schedule
+        self.no_product = no_product
+
+        # Variables for testing (Number of samples and if we want to save the samples):  # noqa
+        self.test_sampling_number = test_sampling_number
+        self.save_samples = save_samples
+
+        if self.save_samples:
+            # assert that the save_path input is correct:
+            assert os.path.exists(save_path)
+            self.save_path = save_path
+
+        # Setup the dataset:
+        self.dataset = QM90_TS_reactant_coords_and_product_graph(
+            graph_product=True,
+        )
+        # Split into 8:1:1 ratio:
+        self.train_dataset, test_dataset = train_test_split(
+            self.dataset, test_size=0.2, random_state=42
+        )
+        self.val_dataset, self.test_dataset = train_test_split(
+            test_dataset, test_size=0.5, random_state=42
+        )
+
+        # Setup the denoising model:
+        self.denoising_model = EGNN_dynamics_graph(
+            in_node_nf=in_node_nf,
+            context_node_nf=0,
+            hidden_nf=hidden_features,
+            in_edge_nf=in_edge_nf,
+            out_node=3,
+            n_dims=3,
+            sin_embedding=True,
+            n_layers=n_layers,
+            device=device,
+            attention=False,
+        )
+        # Setup the diffusion model:
+        self.diffusion_model = DiffusionModel_graph(
+            dynamics=self.denoising_model,
+            in_node_nf=in_node_nf,
+            n_dims=3,
+            timesteps=timesteps,
+            noise_schedule=noise_schedule,
+            device=device,
+        )
+
+        # Save the Hyper-params used:
+        self.save_hyperparameters()
+
+    def train_dataloader(self):
+        return DataLoader(
+            dataset=self.train_dataset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=24,
+        )
+
+    def val_dataloader(self):
+        return DataLoader(
+            dataset=self.val_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=24,
+        )
+
+    def test_dataloader(self):
+        return DataLoader(
+            dataset=self.test_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=24,
+        )  # No need for shuffling - Will make visualisation easier.
+
+    def configure_optimizers(self):
+        """
+        Setup Optimiser and learning rate scheduler if needed.
+        """
+        optimizer = torch.optim.Adam(
+            self.diffusion_model.parameters(), lr=self.lr
+        )  # noqa
+        if self.learning_rate_schedule:
+            lr_scheduler = {
+                "scheduler": ReduceLROnPlateau(
+                    optimizer,
+                    mode="min",
+                    factor=0.5,
+                    patience=50,
+                    min_lr=self.lr / 100,  # noqa
+                ),
+                "monitor": "val_loss",  # The metric to monitor
+                "interval": "epoch",  # The interval to invoke the scheduler ('epoch' or 'step')  # noqa
+                "frequency": 1,  # The frequency of scheduler invocation (every 1 epoch in this case)  # noqa
+            }
+            return [optimizer], [lr_scheduler]
+        else:
+            return optimizer
+
+    def forward(self, x, h, node_mask, edge_mask, edge_attributes):
+        output = self.diffusion_model(
+            x=x,
+            h=h,
+            node_mask=node_mask,
+            edge_mask=edge_mask,
+            edge_attributes=edge_attributes,
+        )
+        return output
+
+    def training_step(self, batch, batch_idx):
+        # Get Coordinates and node mask and edge attributes:
+        coords, node_mask, edge_attributes = batch
+
+        # Split the coords into H and X vectors:
+        if self.no_product:
+            h = coords[:, :, :-6]
+        else:
+            h = coords[:, :, :-3]
+        x = coords[:, :, -3:]
+
+        # Setup the Edge mask (1 everywhere except the diagonals - atom cannot be connected to itself):  # noqa
+        edge_mask = node_mask.unsqueeze(1) * node_mask.unsqueeze(2)
+        diag_mask = (
+            ~torch.eye(edge_mask.size(-1), device=edge_mask.device)
+            .unsqueeze(0)
+            .bool()  # noqa
+        )
+        diag_mask = diag_mask.expand(edge_mask.size())
+        edge_mask *= diag_mask
+
+        # Forward pass:
+        loss = self(x, h, node_mask, edge_mask, edge_attributes)
+
+        # Log the loss:
+        self.log(
+            "train_loss", loss, on_epoch=True, prog_bar=True, on_step=False
+        )  # noqa
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        # Get Coordinates and node mask:
+        coords, node_mask, edge_attributes = batch
+
+        # Split the coords into H and X vectors:
+        if self.no_product:
+            h = coords[:, :, :-6]
+        else:
+            h = coords[:, :, :-3]
+        x = coords[:, :, -3:]
+
+        # Setup the Edge mask (1 everywhere except the diagonals - atom cannot be connected to itself):  # noqa
+        edge_mask = node_mask.unsqueeze(1) * node_mask.unsqueeze(2)
+        diag_mask = (
+            ~torch.eye(edge_mask.size(-1), device=edge_mask.device)
+            .unsqueeze(0)
+            .bool()  # noqa
+        )
+        diag_mask = diag_mask.expand(edge_mask.size())
+        edge_mask *= diag_mask
+
+        # Forward pass:
+        loss = self(x, h, node_mask, edge_mask, edge_attributes)
+
+        # Log the loss:
+        self.log("val_loss", loss, on_epoch=True, prog_bar=True)
+        return loss
+
+    def sample_and_test(
+        self,
+        number_samples,
+        true_h,
+        true_x,
+        node_mask,
+        edge_mask,
+        edge_attributes,
+        folder_path,
+        device=None,
+    ):
+        true_reactant = true_h[:, :, 4:7].clone()
+
+        if not self.no_product:
+            true_product = true_h[:, :, 7:10].clone()
+
+        # Get the OHE of atom-type:
+        atom_ohe = true_h[:, :, :4]
+
+        # Inflate H so that it is the size of the number of samples:
+        inflated_h = true_h.repeat(number_samples, 1, 1)
+
+        # Inflate the node mask and edge masks:
+        node_mask = node_mask.repeat(number_samples, 1)
+        edge_mask = edge_mask.repeat(number_samples, 1, 1)
+
+        # Inflate the Edge_Attributes:
+        edge_attributes = edge_attributes.repeat(number_samples, 1)
+
+        # Set model to evaluation mode (Faster computations and no data-leakage):  # noqa
+        self.diffusion_model.eval()
+        # Sample
+        samples = self.diffusion_model.sample(
+            inflated_h,
+            edge_attributes,
+            number_samples,
+            23,
+            node_mask.to(device),
+            edge_mask.to(device),
+        )
+
+        # Round to prevent downstream type issues in RDKit:
+        true_x = torch.round(true_x, decimals=3)
+
+        # Concatenate the atom ohe with the true sample, reactant and product:
+        true_sample = torch.cat([atom_ohe.to(device), true_x.to(device)], dim=2)  # noqa
+        # Convert to XYZ format:
+        true_samples = return_xyz(
+            true_sample,
+            ohe_dictionary=self.dataset.ohe_dict,
+        )
+
+        true_reactant = torch.cat(
+            [atom_ohe.to(device), true_reactant.to(device)], dim=2
+        )
+        true_reactant = return_xyz(
+            true_reactant,
+            ohe_dictionary=self.dataset.ohe_dict,
+        )
+
+        if not self.no_product:
+            true_product = torch.cat(
+                [atom_ohe.to(device), true_product.to(device)], dim=2
+            )  # noqa
+            true_product = return_xyz(
+                true_product,
+                ohe_dictionary=self.dataset.ohe_dict,
+            )
+
+        # Save the true reactants/products/TS if save_samples set to true:
+        if self.save_samples:
+            true_filename = os.path.join(folder_path, "true_sample.xyz")
+            write_xyz_file(true_samples, true_filename)
+
+            reactant_filename = os.path.join(
+                folder_path,
+                "true_reactant.xyz",
+            )
+            write_xyz_file(true_reactant, reactant_filename)
+
+            if not self.no_product:
+                product_filename = os.path.join(
+                    folder_path,
+                    "true_product.xyz",
+                )
+                write_xyz_file(true_product, product_filename)
+
+        for i in range(number_samples):
+            predicted_sample = (
+                samples[i].unsqueeze(0).to(torch.float64)
+            )  # Unsqueeeze so it has bs
+
+            # Need to round to make sure all the values are clipped and can be converted to doubles when using RDKit down the line:  # noqa
+            predicted_sample = torch.round(predicted_sample, decimals=3)
+
+            predicted_sample = torch.cat(
+                [atom_ohe.to(device), predicted_sample], dim=2
+            )  # noqa
+
+            # Return it to xyz format:
+            predicted_sample = return_xyz(
+                predicted_sample,
+                ohe_dictionary=self.dataset.ohe_dict,
+            )
+
+            # If the save samples is True then save it
+            if self.save_samples:
+                # Let's now try and save the molecule before aligning it and after to see the overlaps later on  # noqa
+                aft_aligning_path = os.path.join(folder_path, f"sample_{i}.xyz")  # noqa
+
+                # Save the samples:
+                write_xyz_file(predicted_sample, aft_aligning_path)
+
+    def test_step(self, batch, batch_idx):
+        # Sample a bunch of test samples and then
+        test_coords, test_node_mask, edge_attributes = batch
+
+        # Setup the edge mask:
+        test_edge_mask = test_node_mask.unsqueeze(1) * test_node_mask.unsqueeze(  # noqa
+            2
+        )  # noqa
+        diag_mask = (
+            ~torch.eye(test_edge_mask.size(-1), device=test_edge_mask.device)
+            .unsqueeze(0)
+            .bool()
+        )
+        diag_mask = diag_mask.expand(test_edge_mask.size())
+        test_edge_mask *= diag_mask
+
+        # If save_samples is true then make sure we have a folder for each samples:  # noqa
+        if self.save_samples:
+            self.save_path_batch = self.save_path + f"batch_{batch_idx}/"
+            os.makedirs(self.save_path_batch, exist_ok=True)
+
+        # Iterate over each test compound and create samples:
+        for i in range(test_coords.shape[0]):
+            # Create a subfolder for the molecule:
+            if self.save_samples:
+                self.save_path_mol = self.save_path_batch + f"mol_{i}/"
+                os.makedirs(self.save_path_mol, exist_ok=True)
+            else:
+                self.save_path_mol = None
+
+            # Seperate the Samples and then feed them through sampling method:
+            # Split the coords into H and X:
+            if self.no_product:
+                test_h = test_coords[i, :, :-6].unsqueeze(0)
+            else:
+                test_h = test_coords[i, :, :-3].unsqueeze(0)
+
+            test_x = test_coords[i, :, -3:].unsqueeze(0)
+            node_mask_input = test_node_mask[i].unsqueeze(0)
+            edge_mask_input = test_edge_mask[i].unsqueeze(0)
+
+            edge_attribute_to_use = edge_attributes[i, :, :]
+
+            # Create samples:
+            self.sample_and_test(
+                number_samples=self.test_sampling_number,
+                true_h=test_h,
+                true_x=test_x,
+                node_mask=node_mask_input,
+                edge_mask=edge_mask_input,
+                edge_attributes=edge_attribute_to_use,
+                folder_path=self.save_path_mol,
+                device=self.device,
+            )
+
+
 if __name__ == "__main__":
     device = dynamics.setup_device()
 
     # Assign which dataset to use:
     dataset_to_use = "W93"
+
+    # Use Graph Model or not?
+    use_reaction_graph_model = True
 
     # Setup Hyper-paremetres:
     learning_rate_schedule = False
@@ -605,8 +975,9 @@ if __name__ == "__main__":
         None  # "Activation_Energy"  # Only Possible with the W93 Dataset # noqa
     )
 
-    # If we do not include the product in the diffusoin step:
-    no_product = False
+    # # If we do not include the product in the diffusoin step:
+    no_product = True
+    in_edge_nf = 2  # When we have the product in the graph
 
     in_node_nf = get_node_features(
         remove_hydrogens=remove_hydrogens,
@@ -622,9 +993,11 @@ if __name__ == "__main__":
     epochs = 2_000
 
     # Setup Saving path:
-    model_name = f"{no_product}_no_product_{dataset_to_use}_dataset_{include_context}_context_{random_rotations}_Random_rotations_{augment_train_set}_augment_train_set_{n_layers}_layers_{hidden_features}_hiddenfeatures_{lr}_lr_{noise_schedule}_{timesteps}_timesteps_{batch_size}_batch_size_{epochs}_epochs_{remove_hydrogens}_Rem_Hydrogens"  # noqa
+    model_name = f"{no_product}_no_product_{use_reaction_graph_model}_graph_model_{dataset_to_use}_dataset_{include_context}_context_{random_rotations}_Random_rotations_{augment_train_set}_augment_train_set_{n_layers}_layers_{hidden_features}_hiddenfeatures_{lr}_lr_{noise_schedule}_{timesteps}_timesteps_{batch_size}_batch_size_{epochs}_epochs_{remove_hydrogens}_Rem_Hydrogens"  # noqa
     folder_name = (
-        f"src/Diffusion/{dataset_to_use}_dataset_weights/" + model_name + "/"
+        f"src/Diffusion/{dataset_to_use}TESTING_FAKE_dataset_weights/"
+        + model_name
+        + "/"
     )  # noqa
 
     # Create the directories:
@@ -640,27 +1013,46 @@ if __name__ == "__main__":
     if not os.path.exists(sample_path):
         os.makedirs(sample_path)
 
-    # Setup model:
-    lit_diff_model = LitDiffusionModel(
-        dataset_to_use=dataset_to_use,
-        in_node_nf=in_node_nf,
-        hidden_features=hidden_features,
-        n_layers=n_layers,
-        device=device,
-        lr=lr,
-        remove_hydrogens=remove_hydrogens,
-        test_sampling_number=1,
-        save_samples=False,
-        save_path=None,
-        timesteps=timesteps,
-        noise_schedule=noise_schedule,
-        random_rotations=random_rotations,
-        augment_train_set=augment_train_set,
-        include_context=include_context,
-        learning_rate_schedule=learning_rate_schedule,
-        no_product=no_product,
-        batch_size=batch_size,
-    )
+    if not use_reaction_graph_model:
+        # Setup model:
+        lit_diff_model = LitDiffusionModel(
+            dataset_to_use=dataset_to_use,
+            in_node_nf=in_node_nf,
+            hidden_features=hidden_features,
+            n_layers=n_layers,
+            device=device,
+            lr=lr,
+            remove_hydrogens=remove_hydrogens,
+            test_sampling_number=1,
+            save_samples=False,
+            save_path=None,
+            timesteps=timesteps,
+            noise_schedule=noise_schedule,
+            random_rotations=random_rotations,
+            augment_train_set=augment_train_set,
+            include_context=include_context,
+            learning_rate_schedule=learning_rate_schedule,
+            no_product=no_product,
+            batch_size=batch_size,
+        )
+    else:
+        # Setup Graph Diffusion model:
+        lit_diff_model = LitDiffusionModel_With_graph(
+            in_node_nf=in_node_nf,
+            in_edge_nf=in_edge_nf,
+            hidden_features=hidden_features,
+            n_layers=n_layers,
+            device=device,
+            lr=lr,
+            test_sampling_number=1,
+            save_samples=False,
+            save_path=None,
+            timesteps=timesteps,
+            noise_schedule=noise_schedule,
+            learning_rate_schedule=learning_rate_schedule,
+            no_product=no_product,
+            batch_size=batch_size,
+        )
 
     # # Load the weights from initial state:
     # path_to_load = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_Activation_Energy_context_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Weights/weights.pth"  # noqa
@@ -668,7 +1060,7 @@ if __name__ == "__main__":
 
     # Create WandB logger:
     wandb_logger = pytorch_lightning.loggers.WandbLogger(
-        project="Diffusion_W93_Dataset_Smaller_BS",
+        project="Diffusion_1234testingsetup",
         name=model_name,  # Diffusion_large_dataset
     )
 

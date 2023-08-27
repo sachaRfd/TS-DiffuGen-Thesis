@@ -8,7 +8,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import LearningRateMonitor
 
 
-from src.Diff_train import LitDiffusionModel
+from src.train import LitDiffusionModel
 from src.EGNN import dynamics
 
 

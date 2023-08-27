@@ -19,6 +19,7 @@ src/Diffusion/Clean_lightning/*
 src/Diffusion/Notebooks
 src/Diffusion/RGD1_dataset_weights/
 
+old_Struff
 
 
 weights_and_samples/
@@ -30,6 +31,7 @@ data/Dataset_RGD1/data/Single_and_Multiple_TS/
 data/Dataset_RGD1/Example_reaction_pngs/
 
 
+src_using_reaction_graphs
 
 
 # Ignore Build stuff: 

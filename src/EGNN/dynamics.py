@@ -5,10 +5,11 @@ Script for EGNN denoising model:
 Code was adapted from https://github.com/ehoogeboom/e3_diffusion_for_molecules/blob/main/egnn/models.py
 
 Main adaptations: 
-    1. Clean code: 
-    2. Debugged and Cleaned:
+    1. Clean code
+    2. Debugged - adapted:
     - Removed un-used functions and classes
     - Made redundant the updated features (using underscore)
+    3. Proof of concept can be seen in script
 
 
 Scripts also contains code to sample from dataset and then add random noise to it to see if the model is able to predict it. 

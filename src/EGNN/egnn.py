@@ -122,7 +122,7 @@ class GCL(nn.Module):
     ):
         row, col = edge_index
         edge_feat, mij = self.edge_model(h[row], h[col], edge_attr, edge_mask)
-        h, agg = self.node_model(h, edge_index, edge_feat, node_attr)
+        h, _ = self.node_model(h, edge_index, edge_feat, node_attr)
         if node_mask is not None:
             h = h * node_mask
         return h, mij
@@ -210,8 +210,13 @@ class EquivariantUpdate(nn.Module):
         edge_mask=None,
     ):
         coord = self.coord_model(
-            h, coord, edge_index, coord_diff, edge_attr, edge_mask
-        )  # noqa
+            h,
+            coord,
+            edge_index,
+            coord_diff,
+            edge_attr,
+            edge_mask,
+        )
         if node_mask is not None:
             coord = coord * node_mask
         return coord

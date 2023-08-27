@@ -1,5 +1,5 @@
-from src.Diff_train import LitDiffusionModel
-from src.Diffusion.Equivariant_Diffusion import get_node_features
+from src.train import LitDiffusionModel
+from src.Diffusion.equivariant_diffusion import get_node_features
 from data.Dataset_W93.setup_dataset_files import process_reactions
 import pytest
 import shutil

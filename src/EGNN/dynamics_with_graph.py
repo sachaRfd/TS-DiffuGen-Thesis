@@ -3,6 +3,8 @@ Script for EGNN denoising model which only contains reactant coordinates and gra
 --------------------------------
 
 Code was adapted from https://github.com/ehoogeboom/e3_diffusion_for_molecules/blob/main/egnn/models.py
+
+Main adaptations include the dynamics taking edge attributes as inputs.
 """
 
 import torch
@@ -17,39 +19,38 @@ from data.Dataset_W93.dataset_reactant_and_product_graph import (
 )
 from src_using_reaction_graphs.EGNN_product_graph.egnn_with_bond_info import (
     EGNN_with_bond,
-)  # noqa
+)
 from src.EGNN.utils import (
     remove_mean,
     remove_mean_with_mask,
     assert_mean_zero_with_mask,
     setup_device,
-)  # noqa
+)
 
 
-class EGNN_dynamics(nn.Module):
+class EGNN_dynamics_graph(nn.Module):
     def __init__(
         self,
-        in_node_nf,
-        context_node_nf,
-        in_edge_nf,
-        n_dims,
-        out_node,
-        hidden_nf=64,
-        device="cpu",
+        in_node_nf: int,
+        in_edge_nf: int,
+        n_dims: int = 3,
+        out_node: int = 3,
+        hidden_nf: int = 64,
+        device: str = "cpu",
         act_fn=torch.nn.SiLU(),
-        n_layers=4,
-        attention=True,
-        condition_time=True,
-        tanh=False,
-        norm_constant=0,
-        inv_sublayers=2,
-        sin_embedding=False,
-        normalization_factor=100,
-        aggregation_method="sum",
+        n_layers: int = 4,
+        attention: bool = True,
+        condition_time: bool = True,
+        tanh: bool = False,
+        norm_constant: int = 0,
+        inv_sublayers: int = 2,
+        sin_embedding: bool = False,
+        normalization_factor: int = 100,
+        aggregation_method: str = "sum",
     ):
         super().__init__()
         self.egnn = EGNN_with_bond(
-            in_node_nf=in_node_nf + context_node_nf,
+            in_node_nf=in_node_nf,
             in_edge_nf=in_edge_nf,
             hidden_nf=hidden_nf,
             device=device,
@@ -67,13 +68,12 @@ class EGNN_dynamics(nn.Module):
         )
         self.in_node_nf = in_node_nf
 
-        self.context_node_nf = context_node_nf
         self.device = device
         self.n_dims = n_dims
         self._edges_dict = {}
         self.condition_time = condition_time
 
-    def forward(self, t, xh, node_mask, edge_mask, context, edge_attributes):  # noqa
+    def forward(self, t, xh, node_mask, edge_mask, context, edge_attributes):
         raise NotImplementedError
 
     def wrap_forward(self, node_mask, edge_mask, context, edge_attributes):
@@ -204,9 +204,8 @@ if __name__ == "__main__":
     n_dims = 3  # Dimension of the TS coordinates at each node (X, Y, Z)
     in_edge_nf = 2  # 2 edge features given indside then we add the distance later --> But changed EGNN function    # noqa
 
-    model = EGNN_dynamics(
+    model = EGNN_dynamics_graph(
         in_node_nf=in_node_nf,
-        context_node_nf=context_nf,
         in_edge_nf=in_edge_nf,
         n_dims=n_dims,
         out_node=out_node,
