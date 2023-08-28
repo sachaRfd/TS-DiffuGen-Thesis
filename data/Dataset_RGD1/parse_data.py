@@ -26,6 +26,10 @@ def main():
     """
     Main Function to save the samples in required format
     """
+    dir = "data/Dataset_RGD1/RGD1_CHNO.h5"
+    assert os.path.exists(
+        dir
+    ), "The RGD1 dataset has not been placed in correct directory"
 
     hf = h5py.File("data/Dataset_RGD1/RGD1_CHNO.h5", "r")
 
@@ -70,7 +74,7 @@ def main():
 
 def checking_duplicates():
     """# noqa
-    Function to check for duplicate reactants and products based on SMILES strings, 
+    Function to check for duplicate reactants and products based on SMILES strings,
     and only save the first one to file.
     """
     # Read the CSV file and open the HDF5 file
@@ -255,6 +259,6 @@ def save_reactions_with_multiple_ts(save_even_single=False):
 
 if __name__ == "__main__":
     print("Running scripts")
-    # main()
-    # checking_duplicates()
-    save_reactions_with_multiple_ts(save_even_single=True)
+    main()
+    checking_duplicates()
+    # save_reactions_with_multiple_ts(save_even_single=True)

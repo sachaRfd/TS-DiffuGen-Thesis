@@ -1,4 +1,4 @@
-from src.train import LitDiffusionModel_With_graph
+from src.lightning_setup import LitDiffusionModel_With_graph
 from src.Diffusion.equivariant_diffusion import get_node_features
 from data.Dataset_W93.setup_dataset_files import process_reactions
 import shutil

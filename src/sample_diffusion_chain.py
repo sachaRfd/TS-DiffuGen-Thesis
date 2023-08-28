@@ -4,7 +4,7 @@ This script it to create samples including their intermediate steps for visualis
 """
 import os
 import torch
-from src.train import LitDiffusionModel
+from src.lightning_setup import LitDiffusionModel
 from Diffusion.saving_sampling_functions import write_xyz_file, return_xyz
 
 

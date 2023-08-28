@@ -34,8 +34,8 @@ from pytorch_lightning.callbacks import LearningRateMonitor
 
 
 """
-Script to train diffusion model using python Lightning
-----------------------------------------------------------
+Script to setup diffusion model using python Lightning
+------------------------------------------------------
 """
 
 

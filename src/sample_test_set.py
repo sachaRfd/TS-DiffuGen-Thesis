@@ -6,8 +6,8 @@ import pytorch_lightning as pl
 import torch
 from src.EGNN import dynamics
 
-from src.train import LitDiffusionModel, LitDiffusionModel_With_graph
-from src.Diffusion.Equivariant_Diffusion import get_node_features
+from src.lightning_setup import LitDiffusionModel, LitDiffusionModel_With_graph
+from src.Diffusion.equivariant_diffusion import get_node_features
 
 
 def test_model(model, logger):
