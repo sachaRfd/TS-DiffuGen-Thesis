@@ -72,13 +72,17 @@ class EGNN_dynamics_graph(nn.Module):
         self._edges_dict = {}
         self.condition_time = condition_time
 
-    def forward(self, t, xh, node_mask, edge_mask, context, edge_attributes):
+    def forward(self, t, xh, node_mask, edge_mask, edge_attributes):
         raise NotImplementedError
 
-    def wrap_forward(self, node_mask, edge_mask, context, edge_attributes):
+    def wrap_forward(self, node_mask, edge_mask, edge_attributes):
         def fwd(time, state):
             return self._forward(
-                time, state, node_mask, edge_mask, context, edge_attributes
+                time,
+                state,
+                node_mask,
+                edge_mask,
+                edge_attributes,
             )
 
         return fwd
@@ -86,7 +90,7 @@ class EGNN_dynamics_graph(nn.Module):
     def unwrap_forward(self):
         return self._forward
 
-    def _forward(self, t, xh, node_mask, edge_mask, context, edge_attributes):
+    def _forward(self, t, xh, node_mask, edge_mask, edge_attributes):
         bs, n_nodes, dims = xh.shape
         h_dims = dims - self.n_dims
 
@@ -110,10 +114,6 @@ class EGNN_dynamics_graph(nn.Module):
                 h_time = t.view(bs, 1).repeat(1, n_nodes)
                 h_time = h_time.view(bs * n_nodes, 1)
             h = torch.cat([h, h_time], dim=1)
-
-        if context is not None:
-            context = context.view(bs * n_nodes, self.context_node_nf)
-            h = torch.cat([h, context], dim=1)
 
         # Here we ignore the h_final as we do not need it but keep in case of future use    # noqa
         _, x_final = self.egnn(

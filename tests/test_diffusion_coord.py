@@ -259,7 +259,6 @@ def test_diffusion_phi():
         device=device,
         noise_schedule=correct_noise_schedule,
     )
-    # diffusion_model = setup()
 
     # Setup fake_dataset:
     t = torch.tensor(10)

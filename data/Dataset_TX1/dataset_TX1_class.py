@@ -6,8 +6,25 @@ from sklearn.model_selection import train_test_split
 from data.Dataset_TX1.TX1_dataloader import Dataloader as TX1_Loader
 
 
+""" # noqa
+
+Script containing TX1 Dataset class:
+- Takes a little while longer because have to iterate over the whole TX1_Loader to 
+set it up in correct way.
+
+
+Not really testable unless a .h5 file containing a small amount of samples is used.
+I did not want to overwelm the Repo with that. 
+
+"""
+
+
 class TX1_dataset(Dataset):
-    def __init__(self, directory="Dataset_TX1/Transition1x.h5", split="data"):
+    def __init__(
+        self,
+        directory="data/Dataset_TX1/Transition1x.h5",
+        split="data",
+    ):
         super().__init__()
 
         # Load TX1 dataloader:
@@ -81,8 +98,6 @@ class TX1_dataset(Dataset):
 
             # Concatenate the padding to the original molecule tensor:
             padded_mol = torch.concatenate((mol, padding), dim=0)
-            # print(padded_mol.shape)
-            # exit()
 
             # Now create the node mask:
             node_mask = torch.tensor(

@@ -1,13 +1,19 @@
-"""
-# noqa
-Adapted from https://gitlab.com/matschreiner/Transition1x/-/blob/main/transition1x/dataloader.py?ref_type=heads
-
-"""
-
-
 import h5py
 import numpy as np
 import torch
+
+
+"""
+# noqa
+
+Script to read the TX1 Dataset .h5 file.
+
+Slight changes from initial script: https://gitlab.com/matschreiner/Transition1x/-/blob/main/transition1x/dataloader.py?ref_type=heads
+
+
+Not really testable without adding a .h5 file to Repo. (Which could overwhelm the project)
+
+"""
 
 
 REFERENCE_ENERGIES = {
@@ -111,7 +117,7 @@ if __name__ == "__main__":
     print("Running script")
 
     dataloader = Dataloader(
-        "Dataset_TX1/Transition1x.h5", "test", only_final=True
+        "data/Dataset_TX1/Transition1x.h5", "test", only_final=True
     )  # noqa
     test_set = []
     test_node_masks = []

@@ -22,14 +22,14 @@ src/Diffusion/RGD1_dataset_weights/
 old_Struff
 
 
+
+
 weights_and_samples/
 data/Dataset_W93/stereo_mols
 data/Dataset_W93/ONE_stereo_centres
 data/Dataset_RGD1/data/Clean_Geometries/
 data/Dataset_RGD1/data/Multiple_TS/
 data/Dataset_RGD1/data/Single_and_Multiple_TS/
-data/Dataset_RGD1/Example_reaction_pngs/
-
 
 src_using_reaction_graphs
 

@@ -1,6 +1,9 @@
 from setuptools import setup, find_packages
 
-# CD to roon directory and run: python setup.py install
+
+"""
+CD to root directory and run: python setup.py install
+"""
 
 
 setup(

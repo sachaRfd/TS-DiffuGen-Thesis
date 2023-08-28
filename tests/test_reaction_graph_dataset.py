@@ -174,10 +174,10 @@ def test_wrong_graph_dataset():
 
 if __name__ == "__main__":
     print("Running test script")
-    test_bond_type()
-    test_padding_bond_type()
-    test_wrong_bond_type()
-    test_get_bond_type()
-    test_adj_matrix()
-    test_graph_dataset()
+    # test_bond_type()
+    # test_padding_bond_type()
+    # test_wrong_bond_type()
+    # test_get_bond_type()
+    # test_adj_matrix()
+    # test_graph_dataset()
     test_wrong_graph_dataset()

@@ -109,9 +109,9 @@ class LitDiffusionModel(pl.LightningModule):
             assert (
                 not self.include_context
             ), "For the RGD1 dataset, including context is not allowed."
-            assert (
-                not self.remove_hydrogens
-            ), "For the RGD1 dataset, removing hydrogens is not allowed."
+            # assert (
+            #     not self.remove_hydrogens
+            # ), "For the RGD1 dataset, removing hydrogens is not allowed."
 
         # For now, context is only 1 variable added to the node features - Only possible with the W93 dataset - Try and not make this hard-coded  # noqa
         if self.include_context and self.dataset_to_use == "W93":
@@ -173,7 +173,8 @@ class LitDiffusionModel(pl.LightningModule):
 
         elif self.dataset_to_use == "RGD1":
             self.dataset = RGD1_TS(
-                directory="data/Dataset_RGD1/data/Single_and_Multiple_TS"
+                directory="data/Dataset_RGD1/data/Single_and_Multiple_TS",
+                remove_hydrogens=self.remove_hydrogens,
             )  # noqa
 
             # We want to match the sizes used in MIT paper 9,000 for training and 1,073 for testing  # noqa
@@ -635,9 +636,14 @@ class LitDiffusionModel_With_graph(pl.LightningModule):
             self.save_path = save_path
 
         # Setup the dataset:
-        self.dataset = W93_TS_coords_and_reacion_graph(
-            graph_product=True,
-        )
+        if self.pytest_time:
+            dir = "data/Dataset_W93/example_data_for_testing/Clean_Geometries"
+            self.dataset = W93_TS_coords_and_reacion_graph(
+                directory=dir,
+                running_pytest=self.pytest_time,
+            )
+        else:
+            self.dataset = W93_TS_coords_and_reacion_graph()
         # Split into 8:1:1 ratio:
         self.train_dataset, test_dataset = train_test_split(
             self.dataset, test_size=0.2, random_state=42
@@ -649,7 +655,6 @@ class LitDiffusionModel_With_graph(pl.LightningModule):
         # Setup the denoising model:
         self.denoising_model = EGNN_dynamics_graph(
             in_node_nf=in_node_nf,
-            context_node_nf=0,
             hidden_nf=hidden_features,
             in_edge_nf=in_edge_nf,
             out_node=3,
@@ -961,16 +966,16 @@ if __name__ == "__main__":
     device = dynamics.setup_device()
 
     # Assign which dataset to use:
-    dataset_to_use = "W93"
+    dataset_to_use = "RGD1"
 
     # Use Graph Model or not?
-    use_reaction_graph_model = True
+    use_reaction_graph_model = False
 
     # Setup Hyper-paremetres:
     learning_rate_schedule = False
     random_rotations = False  # Part of Data Augmentation
     augment_train_set = False  # Also part of Data Augmentation
-    remove_hydrogens = False  # Only Possible with the W93 Dataset
+    remove_hydrogens = True  # Only Possible with the W93 Dataset
     include_context = (
         None  # "Activation_Energy"  # Only Possible with the W93 Dataset # noqa
     )

@@ -1,18 +1,14 @@
 import os
 import numpy as np
 import torch
-from torch_geometric.data import Dataset, Data
-from torch_geometric.utils import erdos_renyi_graph
+from torch_geometric.data import Dataset
 from torch_geometric.loader import DataLoader
 import matplotlib.pyplot as plt
-import pandas as pd
 from sklearn.model_selection import train_test_split
 
 
 """
-Difference compared to other dataset class is that
-when loading the files we exclude the first 2 lines
-because they are the amount of atoms and an empty line.
+
 """
 
 
@@ -30,17 +26,13 @@ class RGD1_TS(Dataset):
         self,
         directory="data/Dataset_RGD1/data/Clean_Geometries/",
         remove_hydrogens=False,
-        graph=False,
         plot_distribution=False,
-        include_context=False,
     ):
         super().__init__()
 
         self.plot_distribution = plot_distribution
-        self.graph = graph
         self.remove_hydrogens = remove_hydrogens
         self.directory = directory
-        self.context = include_context
         self.count = 0
 
         # assert if there is context it should be either Nuclear, Van_Der_Waals or Activation_Energy  # noqa
@@ -49,18 +41,6 @@ class RGD1_TS(Dataset):
             "Van_Der_Waals",
             "Activation_Energy",
         ]
-        assert (
-            not self.context or self.context in self.valid_contexts
-        ), "The context should be one of: " + ", ".join(self.valid_contexts)
-
-        if self.context == "Activation_Energy":
-            # Load the CSV file with extra variables:
-            path_to_csv = "data/Dataset_W93/data/w93_dataset/wb97xd3.csv"
-            # assert that the csv file is present in location:
-            assert os.path.exists(
-                path_to_csv
-            ), f"CSV file '{path_to_csv}' does not exist"
-            self.df = pd.read_csv(path_to_csv).ea
 
         # Data-structures:
         self.atom_dict = {}
@@ -96,12 +76,7 @@ class RGD1_TS(Dataset):
             == self.transition_states.shape  # noqa
         )  # noqa
 
-        if self.graph:
-            print("Creating Graphs")
-            self.create_graph()
-        else:
-            print("Not Using graphs.")
-            self.create_data_array()
+        self.create_data_array()
 
     def count_data(self):
         """
@@ -337,30 +312,6 @@ class RGD1_TS(Dataset):
                 ts_coords - ts_center
             )
 
-    def create_graph(self):
-        """
-        Creates fully connected graphs from the data.
-        """
-        # We can append it to the self.data tensor of graphs, and make the positions the TS, we also make it fully connected  # noqa
-        for index in range(self.count):
-            # Create Fully connected graph
-            num_nodes = self.reactant[index].shape[0]
-            edge_index = erdos_renyi_graph(num_nodes, edge_prob=1.0)
-
-            graph = Data(
-                x=torch.cat(
-                    [
-                        self.reactant[index, :, :],
-                        self.product[index, :, -3:],
-                        self.transition_states[index, :, -3:],
-                    ],
-                    dim=1,
-                ),
-                pos=self.transition_states[index, :, -3:],
-                edge_index=edge_index,
-            )
-            self.data.append(graph)
-
     def get_keys_from_value(self, search_value):
         """
         Retrieves atom types based on their one-hot encoded vectors.
@@ -376,65 +327,17 @@ class RGD1_TS(Dataset):
         """# noqa
         Creates data arrays with context information based on the selected context or without context.
         """
-        if self.context:
-            print(f"Including {self.context} to context")
-            for index in range(self.count):
-                ohes = self.reactant[index, :, :-3]
-
-                if self.context == "Van_Der_Waals":
-                    # Get the atom type
-                    atom_types = [
-                        self.get_keys_from_value(atom.tolist()) for atom in ohes  # noqa
-                    ]  # Get the atom type
-                    context_values = torch.tensor(
-                        [
-                            [self.VAN_DER_WAALS_RADIUS[atom_type[0]]]
-                            for atom_type in atom_types
-                        ]
-                    )
-
-                elif self.context == "Nuclear_Charges":
-                    # Get the atom type
-                    atom_types = [
-                        self.get_keys_from_value(atom.tolist()) for atom in ohes  # noqa
-                    ]
-                    context_values = torch.tensor(
-                        [
-                            [self.NUCLEAR_CHARGES[atom_type[0]]]
-                            for atom_type in atom_types
-                        ]
-                    )
-                elif self.context == "Activation_Energy":
-                    context_values = torch.tensor(
-                        self.df.iloc[index], dtype=torch.float32
-                    ).expand(  # noqa
-                        self.reactant[0].shape[0], 1
-                    )
-
-                x = torch.cat(
-                    [
-                        ohes,
-                        context_values,
-                        self.reactant[index, :, -3:],
-                        self.product[index, :, -3:],
-                        self.transition_states[index, :, -3:],
-                    ],
-                    dim=1,
-                )
-
-                self.data.append(x)
-        else:
-            print("Not including Context information")
-            for index in range(self.count):
-                x = torch.cat(
-                    [
-                        self.reactant[index, :, :],
-                        self.product[index, :, -3:],
-                        self.transition_states[index, :, -3:],
-                    ],
-                    dim=1,
-                )
-                self.data.append(x)
+        print("Not including Context information")
+        for index in range(self.count):
+            x = torch.cat(
+                [
+                    self.reactant[index, :, :],
+                    self.product[index, :, -3:],
+                    self.transition_states[index, :, -3:],
+                ],
+                dim=1,
+            )
+            self.data.append(x)
 
     def get(self, idx):
         """
@@ -451,13 +354,10 @@ class RGD1_TS(Dataset):
 
 if __name__ == "__main__":
     remove_hydrogens = False
-    include_context = "Activation_Energy"
     dataset = RGD1_TS(
         directory="data/Dataset_RGD1/data/Clean_Geometries/",
         remove_hydrogens=remove_hydrogens,
-        graph=False,
         plot_distribution=False,
-        include_context=include_context,
     )
 
     # In all papers they use 8:1:1 ratio

@@ -5,14 +5,12 @@ import pandas as pd
 from tqdm import tqdm
 
 """ # noqa
-Script to iterate over the RGD1 Dataset 
-
-- Download the RGD1_CHNO.h5 file and place it in the same directory as this one. 
-
 Adapted from the following repository: https://zenodo.org/record/7618731
 
 
+Script to iterate over the RGD1 Dataset 
 
+- Download the RGD1_CHNO.h5 file and place it in the same directory as this one. 
 - Then run following script to create the .XYZ file
 """
 
@@ -72,7 +70,8 @@ def main():
 
 def checking_duplicates():
     """# noqa
-    Function to check for duplicate reactants and products based on SMILES strings
+    Function to check for duplicate reactants and products based on SMILES strings, 
+    and only save the first one to file.
     """
     # Read the CSV file and open the HDF5 file
     # csv_file = pd.read_csv("data/Dataset_RGD1/DFT_reaction_info.csv")
@@ -136,7 +135,7 @@ def checking_duplicates():
 def save_reactions_with_multiple_ts(save_even_single=False):
     """# noqa
 
-    - Function that finds reactions with multiple TS conformers (By looking at identical reaction strings)
+    - Function that finds reactions with multiple TS conformers (By looking at identical reaction smiles)
     - Then saves each reaction inside the directory:
         data/RDD1_Dataset/data/Multiple_TS/Reaction_{reaction_smiles}
     - Inside that directory, it saves the true_reactant, true_product, TS_1, TS_X_{activation_energy}, TS_x_{Activation_energy}

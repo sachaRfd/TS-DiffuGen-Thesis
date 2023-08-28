@@ -580,13 +580,12 @@ class DiffusionModel_graph(DiffusionModel):
             noise_precision,
         )
 
-    def phi(self, x, t, node_mask, edge_mask, context, edge_attributes):
+    def phi(self, x, t, node_mask, edge_mask, edge_attributes):
         _, net_out = self.dynamics._forward(
             t,
             x,
             node_mask,
             edge_mask,
-            context=context,
             edge_attributes=edge_attributes,  # Predicted H is USELESS IN our use-case # noqa
         )
         EGNN_utils.assert_mean_zero_with_mask(
@@ -599,7 +598,6 @@ class DiffusionModel_graph(DiffusionModel):
         z0,
         node_mask,
         edge_mask,
-        context=None,
         edge_attributes=None,
         fix_noise=False,
     ):
@@ -615,7 +613,6 @@ class DiffusionModel_graph(DiffusionModel):
             x=z0,
             node_mask=node_mask,
             edge_mask=edge_mask,
-            context=context,
             edge_attributes=edge_attributes,
         )
 
@@ -636,7 +633,13 @@ class DiffusionModel_graph(DiffusionModel):
         return x
 
     def compute_loss(
-        self, x, h, node_mask, edge_mask, context, edge_attributes, t0_always
+        self,
+        x,
+        h,
+        node_mask,
+        edge_mask,
+        edge_attributes,
+        t0_always,
     ):
         """Computes an estimator for the variational lower bound, or the simple loss (MSE)."""  # noqa
 
@@ -689,7 +692,6 @@ class DiffusionModel_graph(DiffusionModel):
             t.to(self.device),
             node_mask.to(self.device),
             edge_mask.to(self.device),
-            context,
             edge_attributes,
         )
 
@@ -716,7 +718,6 @@ class DiffusionModel_graph(DiffusionModel):
             h,
             node_mask,
             edge_mask,
-            context=None,
             edge_attributes=edge_attributes,
             t0_always=False,
         )
@@ -735,7 +736,6 @@ class DiffusionModel_graph(DiffusionModel):
         zt,
         node_mask,
         edge_mask,
-        context=None,
         edge_attributes=None,
         fix_noise=False,
     ):
@@ -753,7 +753,13 @@ class DiffusionModel_graph(DiffusionModel):
         sigma_t = self.sigma(gamma_t, target_tensor=zt)
 
         # Neural net prediction.
-        eps_t = self.phi(zt, t, node_mask, edge_mask, context, edge_attributes)
+        eps_t = self.phi(
+            zt,
+            t,
+            node_mask,
+            edge_mask,
+            edge_attributes,
+        )
 
         # Compute mu for p(zs | zt).
         EGNN_utils.assert_mean_zero_with_mask(
@@ -805,7 +811,6 @@ class DiffusionModel_graph(DiffusionModel):
         n_nodes,
         node_mask,
         edge_mask,
-        context=None,
         fix_noise=False,
     ):
         """
@@ -847,7 +852,6 @@ class DiffusionModel_graph(DiffusionModel):
                 z.to(self.device),
                 node_mask.to(self.device),
                 edge_mask.to(self.device),
-                context,
                 edge_attributes,
                 fix_noise=fix_noise,
             )
@@ -857,7 +861,6 @@ class DiffusionModel_graph(DiffusionModel):
             z,
             node_mask.to(self.device),
             edge_mask.to(self.device),
-            context,
             edge_attributes,
             fix_noise=fix_noise,
         )
@@ -878,7 +881,11 @@ class DiffusionModel_graph(DiffusionModel):
         return x
 
 
-def get_node_features(remove_hydrogens, include_context, no_product=False):
+def get_node_features(
+    remove_hydrogens=False,
+    include_context=False,
+    no_product=False,
+):
     """# noqa
     Function that returns the correct variables depending on variables used
 

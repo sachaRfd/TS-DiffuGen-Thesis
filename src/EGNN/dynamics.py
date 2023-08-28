@@ -76,12 +76,12 @@ class EGNN_dynamics_QM9(nn.Module):
         self._edges_dict = {}
         self.condition_time = condition_time
 
-    def forward(self, t, xh, node_mask, edge_mask, context=None):
+    def forward(self, t, xh, node_mask, edge_mask):
         raise NotImplementedError
 
-    def wrap_forward(self, node_mask, edge_mask, context):
+    def wrap_forward(self, node_mask, edge_mask):
         def fwd(time, state):
-            return self._forward(time, state, node_mask, edge_mask, context)
+            return self._forward(time, state, node_mask, edge_mask)
 
         return fwd
 
