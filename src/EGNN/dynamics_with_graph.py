@@ -14,11 +14,12 @@ from torch_geometric.loader import DataLoader
 import numpy as np
 from torch.utils.data.dataset import random_split
 
-from data.Dataset_W93.dataset_reactant_and_product_graph import (
+from data.Dataset_W93.dataset_reaction_graph import (
     W93_TS_coords_and_reacion_graph,
 )
 
-from src.EGNN.egnn_with_bond_info import EGNN_with_bond
+
+from src.EGNN.egnn_with_graph import EGNN_with_bond
 from src.EGNN.utils import (
     remove_mean,
     remove_mean_with_mask,

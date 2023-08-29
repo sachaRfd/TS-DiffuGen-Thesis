@@ -2,7 +2,7 @@
 # conda env create -f environment.yml
 
 
-name: TSDiff
+name: tsdiff
 channels:
   - conda-forge
   - defaults

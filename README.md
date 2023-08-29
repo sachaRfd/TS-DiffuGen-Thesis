@@ -1,6 +1,7 @@
 # Diffusion Models for Optimised Geometry Prediction
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
+[![Powered by RDKit](https://img.shields.io/badge/Powered%20by-RDKit-3838ff.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAFVBMVEXc3NwUFP8UPP9kZP+MjP+0tP////9ZXZotAAAAAXRSTlMAQObYZgAAAAFiS0dEBmFmuH0AAAAHdElNRQfmAwsPGi+MyC9RAAAAQElEQVQI12NgQABGQUEBMENISUkRLKBsbGwEEhIyBgJFsICLC0iIUdnExcUZwnANQWfApKCK4doRBsKtQFgKAQC5Ww1JEHSEkAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyMi0wMy0xMVQxNToyNjo0NyswMDowMDzr2J4AAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjItMDMtMTFUMTU6MjY6NDcrMDA6MDBNtmAiAAAAAElFTkSuQmCC)](https://www.rdkit.org/)
 ![Tests Status](https://github.com/schwallergroup/DiffSach/actions/workflows/flake8.yml/badge.svg)
 ![Tests Status](https://github.com/schwallergroup/DiffSach/actions/workflows/tests.yml/badge.svg)
 
@@ -108,7 +109,7 @@ The main dataset used for this project was the W93 dataset and therefore that on
 
 2. Travel to the root repository: 
 
-``$ cd DiffSach``
+``$ cd TS-DiffuGen``
 
 3. Create the Conda environment:
 
@@ -174,8 +175,39 @@ To set up the RGD1 dataset, follow these steps:
     $ python src/train_test.py --config configs/train_diffusion.yml
     ```
 
+## Sampling from test set using a pre-trained Diffusion Model:
 
-## Sampling from test set using a Diffusion Model:
+The pre-trained_graph model was trained with the following parameters: 
+- Uses Reaction Graphs
+- Does not use Product coordinates 
+- 1,000 sampling steps
+- 8 EGNN layers
+- 64 hidden features
+- Sigmoid_2 noise schedule
+
+The pre-trained_simple model was trained with the following parameters: 
+- TX1 Dataset
+- Without Reaction Graphs
+- Using Product coordinates in inference 
+- 2,000 sampling steps
+- 8 EGNN layers
+- 64 hidden features
+- Sigmoid_2 noise schedule
+
+1. Run the following script with the chosen testing config file:
+    ```
+    $ python src/train_test.py --config configs/test_pre_trained_diffusion_simple.yml
+    ```
+    or
+    ```
+    $ python src/train_test.py --config configs/test_pre_trained_diffusion_with_graphs.yml
+    ```
+
+2. Samples from the testset will be generated within the chosen model's Samples directory. This should take around 2 hours for the whole testset.
+
+
+
+## Sampling from test set using a  Diffusion Model:
 
 1. Adapt the parameters in the `configs/test_diffusion.yml` to match those that you used during training. 
 2. Run the following command to sample from the test set using your trained diffusion model:

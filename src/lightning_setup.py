@@ -24,7 +24,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 from data.Dataset_W93.dataset_class import W93_TS
-from data.Dataset_W93.dataset_reactant_and_product_graph import (
+from data.Dataset_W93.dataset_reaction_graph import (
     W93_TS_coords_and_reacion_graph,
 )
 from data.Dataset_TX1.dataset_TX1_class import TX1_dataset
@@ -969,7 +969,7 @@ if __name__ == "__main__":
     dataset_to_use = "RGD1"
 
     # Use Graph Model or not?
-    use_reaction_graph_model = False
+    use_reaction_graph_model = True
 
     # Setup Hyper-paremetres:
     learning_rate_schedule = False

@@ -7,9 +7,8 @@ use_graph_in_model: True
 
 # Diffusion Variables
 dataset_to_use: W93
-timesteps: 5_000
+timesteps: 1_000
 noise_schedule: sigmoid_2
-loss_type: l2
 remove_hydrogens: False
 random_rotations: False
 augment_train_set: True
@@ -23,14 +22,14 @@ lr: 0.0001
 epochs: 10
 batch_size: 64
 learning_rate_scheduler: False 
-model_name: cool_TS_Diffusion_model 
-folder_name: small_graph_diffusion
+model_name: cool_Diffusion_model 
+folder_name: Example_Name
 
 
 wandb_project_name: Diffusion_TEST_123
 
 # Model Variables: 
-n_layers: 2
+n_layers: 8
 hidden_features: 64 
 
 

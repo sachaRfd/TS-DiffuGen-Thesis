@@ -23,7 +23,7 @@ from src.EGNN.egnn import (
     EquivariantBlock,
 )
 
-from data.Dataset_W93.dataset_reactant_and_product_graph import (
+from data.Dataset_W93.dataset_reaction_graph import (
     W93_TS_coords_and_reacion_graph,
 )
 

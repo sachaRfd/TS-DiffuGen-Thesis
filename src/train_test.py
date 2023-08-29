@@ -29,7 +29,7 @@ def main(args):
     # Get the paths:
     model_name = args.model_name
     folder_name = args.folder_name
-    folder_name = "Model_Weights/" + folder_name
+    folder_name = "trained_models/" + folder_name
     # Create the Weights and Samples folder:
     model_path = folder_name + "/Weights/"
     sample_path = folder_name + "/Samples/"

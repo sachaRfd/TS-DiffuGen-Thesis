@@ -1,13 +1,16 @@
-from data.Dataset_W93.dataset_reactant_and_product_graph import (
+from data.Dataset_W93.setup_dataset_files import process_reactions
+from src.EGNN.utils import assert_mean_zero_with_mask
+
+from data.Dataset_W93.dataset_reaction_graph import (
     W93_TS_coords_and_reacion_graph,
     get_adj_matrix_no_batch,
     bond_to_edge,
     get_bond_type,
 )
-from data.Dataset_W93.setup_dataset_files import process_reactions
-from src.EGNN.utils import assert_mean_zero_with_mask
+
 
 import shutil
+
 import torch
 import pandas as pd
 import pytest
@@ -180,4 +183,4 @@ if __name__ == "__main__":
     # test_get_bond_type()
     # test_adj_matrix()
     # test_graph_dataset()
-    test_wrong_graph_dataset()
+    # test_wrong_graph_dataset()

@@ -13,7 +13,7 @@ remove_hydrogens: False
 random_rotations: False
 augment_train_set: False
 include_context: False
-remove_product: False
+remove_product: True
 
 
 
@@ -23,7 +23,7 @@ epochs: 10
 batch_size: 64
 learning_rate_scheduler: False 
 model_name: cool_TS_Diffusion_model 
-folder_name: Example_Name
+folder_name: pre_trained_graph_diffusion/
 
 
 wandb_project_name: Diffusion_TEST_123

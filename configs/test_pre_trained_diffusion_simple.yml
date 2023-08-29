@@ -2,12 +2,12 @@
 train_test: test
 
 # Use Graph or Not: 
-use_graph_in_model: True
+use_graph_in_model: False
 
 
 # Diffusion Variables
-dataset_to_use: W93
-timesteps: 1_000
+dataset_to_use: TX1
+timesteps: 2_000
 noise_schedule: sigmoid_2
 remove_hydrogens: False
 random_rotations: False
@@ -23,7 +23,7 @@ epochs: 10
 batch_size: 64
 learning_rate_scheduler: False 
 model_name: cool_TS_Diffusion_model 
-folder_name: Example_Name
+folder_name: pre_trained_diffusion_simple/
 
 
 wandb_project_name: Diffusion_TEST_123
