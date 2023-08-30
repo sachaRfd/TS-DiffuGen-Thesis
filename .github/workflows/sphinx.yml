@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install flake8
+          pip install sphinx sphinx_rtd_theme
 
 
       - name: Install texlive

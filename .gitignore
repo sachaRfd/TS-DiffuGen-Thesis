@@ -6,6 +6,9 @@ __pycache__/
 .vscode
 
 
+# Temporarly remove test yml file
+tests.yml
+
 
 
 # Ignore all __pycache__ folders in the entire project
