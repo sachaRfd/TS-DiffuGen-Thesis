@@ -15,7 +15,7 @@ In this project, transition state optimization involves generating accurate 3D r
 
 
 
-<p align="center">
+<div align="center">
   <div style="display: flex; justify-content: center;">
     <div style="margin-right: 20px;">
       <img src="visualisations/gifs/sample_5_1x.gif" alt="example gif" width="500">
@@ -27,7 +27,8 @@ In this project, transition state optimization involves generating accurate 3D r
       </figure>
     </div>
   </div>
-</p>
+</div>
+
 
 
 
