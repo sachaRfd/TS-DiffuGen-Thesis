@@ -13,7 +13,7 @@ This repository contains the code for implementing Sacha Raffaud's IRP project t
 
 In this project, transition state optimization involves generating accurate 3D representations of transition states. This is achieved by utilizing reactant and product coordinates along with atom types. Optionally, reaction graphs can also be used as input, currently available with the initial W93 Dataset.
 
-<div style="display: flex; justify-content: center;">
+<!-- <div style="display: flex; justify-content: center;">
   <div style="margin-right: 20px;">
     <img src="visualisations/gifs/sample_5_1x.gif" alt="example gif">
   </div>
@@ -23,16 +23,16 @@ In this project, transition state optimization involves generating accurate 3D r
       <figcaption style="text-align: center;"></figcaption>
     </figure>
   </div>
-</div>
+</div> -->
 
 
 <div style="display: flex; justify-content: center;">
-  <div style="margin-right: 10px;">
-    <img src="visualisations/gifs/sample_5_1x.gif" alt="example gif" width="300">
+  <div style="margin-right: 20px;">
+    <img src="visualisations/gifs/sample_5_1x.gif" alt="example gif" width="500">
   </div>
   <div>
     <figure style="margin: 0;">
-      <img src="visualisations/gifs/sample_4_1x.gif" alt="example gif" width="300">
+      <img src="visualisations/gifs/sample_4_1x.gif" alt="example gif" width="500">
       <figcaption style="text-align: center;"></figcaption>
     </figure>
   </div>
