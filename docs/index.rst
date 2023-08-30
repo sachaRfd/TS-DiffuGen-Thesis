@@ -7,7 +7,7 @@ This is the documentation for the TS-DiffuGen Package.
    :maxdepth: 2
    :caption: Contents:
 
-.. automodule:: src
+.. automodule:: src/evaluate_samples
    :members: 
    :inherited-members:
    :undoc-members:
