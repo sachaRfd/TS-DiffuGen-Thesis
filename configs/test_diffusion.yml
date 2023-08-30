@@ -12,7 +12,7 @@ noise_schedule: sigmoid_2
 remove_hydrogens: False
 random_rotations: False
 augment_train_set: False
-include_context: False
+include_context: 
 remove_product: False
 
 

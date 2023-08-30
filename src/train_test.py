@@ -308,7 +308,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--augment_train_set", type=bool, default=True
     )  # Augment the train set by duplicating each train reation but replacing the product with the reactant and vice versa  # noqa
-    parser.add_argument("--include_context", type=bool, default=False)
+    parser.add_argument("--include_context", type=str, default=None)
     parser.add_argument(
         "--remove_product",
         type=bool,
