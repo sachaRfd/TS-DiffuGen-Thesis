@@ -1,11 +1,14 @@
 # Sacha Raffaud sachaRfd and acse-sr1022
 
-"""
-This is current code to create XYZ files of the generated transition states
-------------------------------------------------------------------------------
-"""
-
 import torch
+
+
+"""
+This file contains the functions to convert diffusion samples from tensor 
+format into writable .xyz format.
+
+These functions are included within the PyTest framework.
+"""  # noqa
 
 
 def write_xyz_file(data, filename):
@@ -22,13 +25,6 @@ def write_xyz_file(data, filename):
     Returns:
         None: This function does not return anything. It writes the data into the specified file.
 
-    Description:
-        This function takes the Molecule Conformation data as input and writes it into an XYZ file,
-        which is a plain text format for representing molecular structures. The function opens the
-        specified file in write mode, writes the number of atoms in the molecule as the first line,
-        leaves the second line empty, and then writes each atom's information in a separate line.
-        Each line contains the atom name, x-coordinate, y-coordinate, and z-coordinate separated
-        by spaces.
     """
 
     # If the filename does not end with .xyz then add to it:
@@ -80,17 +76,6 @@ def return_xyz(sample, ohe_dictionary, remove_hydrogen=False):
             - The z-coordinate (float) of the atom's position in 3D space.
             If `remove_hydrogen` is False, the atom list also contains:
             - An atom property (int) obtained from the original atom data.
-
-    Description:
-        This function takes a list of molecular structures (`sample`) and converts it into the XYZ format, a plain text
-        format used to represent molecular geometries. The function iterates over each atom in each molecule of the
-        `sample` and converts its encoding to an atom name using the provided one-hot encoding dictionary `dataset.ohe_dict`.
-        If the atom encoding is found in the one-hot encoding dictionary, the atom is included in the output.
-        The output format contains the atom name and its three-dimensional coordinates (x, y, z) in separate elements
-        for each atom.
-
-        If `remove_hydrogen` is set to True, hydrogen atoms are excluded from the output, effectively simplifying the
-        molecular representation.
     """
     # Now we can remove the samples that have 0 in all the first 4 arrays
     clean_molecule = []

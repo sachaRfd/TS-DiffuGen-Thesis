@@ -1,15 +1,5 @@
 # Sacha Raffaud sachaRfd and acse-sr1022
 
-"""
-
-Code for the noise schedules:
-
-
-Also includes plots of denoising of a molecule
-
-
-"""
-
 import os
 import numpy as np
 import torch
@@ -19,9 +9,19 @@ import src.Diffusion.utils as diffusion_utils
 from src.Diffusion.saving_sampling_functions import return_xyz, write_xyz_file
 
 
+"""
+
+This file includes the functions that describe the noise schedules used in the diffusion process.
+
+
+This file has been tested.
+
+"""  # noqa
+
+
 def clip_noise_schedule(alphas2, clip_value=0.001):
     """
-    Clips the noise schedule given by alpha^2 to improve stability during sampling.     # noqa
+    Clips the noise schedule given by alpha^2 to improve stability during sampling.
 
     Parameters:
         alphas2 (numpy.ndarray): 1-dimensional array containing the values of alpha^2 for the noise schedule.
@@ -31,8 +31,7 @@ def clip_noise_schedule(alphas2, clip_value=0.001):
     Returns:
         numpy.ndarray: A 1-dimensional array containing the clipped noise schedule, where alpha_t / alpha_t-1
                         is clipped to be greater than or equal to 'clip_value'.
-
-    """
+    """  # noqa
     alphas2 = np.concatenate(
         [np.ones(1), alphas2], axis=0
     )  # Add 1 to left of array # noqa
@@ -47,7 +46,7 @@ def clip_noise_schedule(alphas2, clip_value=0.001):
 
 def polynomial_schedule(timesteps: int, s=1e-4, power=3.0):
     """
-    Generate a noise schedule based on a simple polynomial equation: 1 - (x / timesteps)^power. # noqa
+    Generate a noise schedule based on a simple polynomial equation: 1 - (x / timesteps)^power.
 
     Parameters:
         timesteps (int): The total number of time steps for the noise schedule.
@@ -56,7 +55,7 @@ def polynomial_schedule(timesteps: int, s=1e-4, power=3.0):
 
     Returns:
         numpy.ndarray: A 1-dimensional array representing the noise schedule, containing alpha^2 values.
-    """
+    """  # noqa
     steps = timesteps + 1
     x = np.linspace(0, steps, steps)
     alphas2 = (1 - np.power(x / steps, power)) ** 2
@@ -77,12 +76,12 @@ def cosine_beta_schedule(timesteps, s=0.008, raise_to_power: float = 1):
 
     Parameters:
         timesteps (int): The total number of time steps for the beta schedule.
-        s (float, optional): A scaling parameter to control the schedule's behavior. Defaults to 0.008. # noqa
+        s (float, optional): A scaling parameter to control the schedule's behavior. Defaults to 0.008.
         raise_to_power (float, optional): A power value to raise the beta values to. Defaults to 1.
 
     Returns:
         numpy.ndarray: A 1-dimensional array representing the cosine beta schedule.
-    """
+    """  # noqa
     steps = timesteps + 2
     x = np.linspace(0, steps, steps)
     alphas_cumprod = np.cos(((x / steps) + s) / (1 + s) * np.pi * 0.5) ** 2
@@ -102,7 +101,7 @@ def sigmoid_beta_schedule(timesteps, raise_to_power: float = 1, S: float = 6):
     """
     Generate a sigmoid beta schedule with optional power scaling.
 
-    The sigmoid schedule transitions from low to high values based on the sigmoid function. # noqa
+    The sigmoid schedule transitions from low to high values based on the sigmoid function.
 
     Parameters:
         timesteps (int): The total number of time steps for the beta schedule.
@@ -116,7 +115,7 @@ def sigmoid_beta_schedule(timesteps, raise_to_power: float = 1, S: float = 6):
 
     Examples:
         - If you choose S = 1, you will be returned a linear noise schedule.
-    """
+    """  # noqa
     steps = timesteps + 2
     x = np.linspace(-S, S, steps)
     alphas2 = (1 / (1 + np.exp(-x))) ** 2
@@ -152,7 +151,7 @@ class PredefinedNoiseSchedule(torch.nn.Module):
     Note:
         The class does not use learned parameters; instead, it creates predefined noise schedules
         using the specified options.
-    """
+    """  # noqa
 
     def __init__(self, noise_schedule, timesteps, precision):
         super(PredefinedNoiseSchedule, self).__init__()
@@ -194,7 +193,7 @@ def inflate_batch_array(array, target):
     """
     Inflate the batch array to match the target shape.
 
-    This function inflates the batch array 'array' with only a single axis (i.e., shape=(batch_size,), or possibly # noqa
+    This function inflates the batch array 'array' with only a single axis (i.e., shape=(batch_size,), or possibly
     more empty axes (i.e., shape=(batch_size, 1, ..., 1)) to match the shape of the target tensor.
 
     Parameters:
@@ -203,7 +202,7 @@ def inflate_batch_array(array, target):
 
     Returns:
         torch.Tensor: The inflated batch array with the same shape as the target tensor.
-    """
+    """  # noqa
     target_shape = (array.size(0),) + (1,) * (len(target.size()) - 1)
     return array.view(target_shape)
 
@@ -219,8 +218,8 @@ def sigma(gamma, target_tensor):
         target_tensor (torch.Tensor): The target tensor with the desired shape.
 
     Returns:
-        torch.Tensor: The output tensor representing the computed sigma values with the same shape as the target tensor. # noqa
-    """
+        torch.Tensor: The output tensor representing the computed sigma values with the same shape as the target tensor.
+    """  # noqa
     return inflate_batch_array(torch.sqrt(torch.sigmoid(gamma)), target_tensor)
 
 
@@ -228,7 +227,7 @@ def alpha(gamma, target_tensor):
     """
     Compute the alpha function given gamma.
 
-    The alpha function is defined as the square root of the sigmoid of negative gamma.  # noqa
+    The alpha function is defined as the square root of the sigmoid of negative gamma.
 
     Parameters:
         gamma (torch.Tensor): Input tensor containing gamma values.
@@ -236,7 +235,7 @@ def alpha(gamma, target_tensor):
 
     Returns:
         torch.Tensor: The output tensor representing the computed alpha values with the same shape as the target tensor.
-    """
+    """  # noqa
     return inflate_batch_array(torch.sqrt(torch.sigmoid(-gamma)), target_tensor)  # noqa
 
 

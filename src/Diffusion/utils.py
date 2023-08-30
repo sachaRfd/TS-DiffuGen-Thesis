@@ -5,8 +5,17 @@ import numpy as np
 from src.EGNN.utils import remove_mean_with_mask
 
 
+"""
+
+This file contains the Utility functions required in the diffusion process.
+
+These functions are integrated within the PyTest Framework.
+
+"""  # noqa
+
+
 def assert_mean_zero(x):
-    """# noqa
+    """
     Asserts that the mean of each row in the input tensor `x` is approximately zero.
 
     Args:
@@ -14,14 +23,14 @@ def assert_mean_zero(x):
 
     Raises:
         AssertionError: If the absolute value of the maximum mean is >= 1e-6.
-    """
+    """  # noqa
     mean = torch.mean(x, dim=1, keepdim=True)
     mean = mean.abs().max().item()
     assert mean < 1e-5
 
 
 def sample_center_gravity_zero_gaussian_with_mask(size, device, node_mask):
-    """# noqa
+    """
     Generates a tensor following a Gaussian distribution, centered at zero,
     while considering a node mask.
 
@@ -32,7 +41,7 @@ def sample_center_gravity_zero_gaussian_with_mask(size, device, node_mask):
 
     Returns:
         x_projected (torch.Tensor): Generated tensor with masked center gravity.
-    """
+    """  # noqa
     assert len(size) == 3
     x = torch.randn(size, device=device)
 
@@ -46,8 +55,7 @@ def sample_center_gravity_zero_gaussian_with_mask(size, device, node_mask):
 
 
 def random_rotation(x, h):
-    """# noqa
-
+    """
 
     Algorithm:
     1. Input sample with coordinates x and node features H
@@ -70,7 +78,7 @@ def random_rotation(x, h):
 
     Returns:
         torch.Tensor, torch.Tensor: Rotated 3D coordinates tensor and updated information tensor.
-    """
+    """  # noqa
 
     # assert that this is only possible with h vector of size 9 or 10:
     assert h.shape[2] == 9 or h.shape[2] == 10
@@ -151,58 +159,9 @@ def random_rotation(x, h):
     # Transpose back the to the original shape
     product = product.transpose(1, 2)
 
-    # print(product)
-
     # Concatenate the reactant and product back together
     h_rot = h.clone()
     h_rot[:, :, -3:] = product
     h_rot[:, :, -6:-3] = reactant
 
     return x.contiguous(), h_rot.contiguous()
-
-
-# if __name__ == "__main__":
-# print("Running Tests")
-
-# # Let's check that all the above functions work as intended here !!!
-# dataset = W93_TS()
-# train_loader = DataLoader(dataset=dataset, batch_size=64, shuffle=True)
-
-# example_sample = next(iter(train_loader))
-
-# # print(next(iter(train_loader)))
-
-# # Now we can verify that each function works as intended:
-
-# # Sum_except_batch:
-# sum_batch = sum_except_batch(example_sample)
-# # print(sum_batch)
-
-# # Remove Mean:
-# fake_batch_mean_removed = remove_mean_including_reactants_and_products(
-#     example_sample
-# )
-# # print((fake_batch_mean_removed == example_sample).sum())
-# assert_mean_zero(fake_batch_mean_removed[:, :, 4:7])
-
-# # Remove mean of TS:
-# TS_removed_mean = remove_mean_just_ts(example_sample[:, :, 10:13])
-# # print(TS_removed_mean)
-
-# # Assert mean is 0 --> it should already be the case:
-# assert_mean_zero(example_sample[:, :, 4:7])
-
-# # Sample random gaussian like the shape of TS:
-# random_ts_noise = sample_center_gravity_zero_gaussian(
-#     example_sample[:, :, 10:].shape, "cpu"
-# )
-# # print(random_ts_noise)
-# assert_mean_zero(random_ts_noise)
-
-# # Testing the other Log likelihood function:
-# log_hood_2 = standard_gaussian_log_likelihood(example_sample[:, :, 10:])
-# # print(log_hood_2)
-
-# # Testing the Rajdom gaussian sampling that is not centred on 0:
-# random_noise = sample_gaussian(example_sample[:, :, 10:13].shape, "cpu")
-# # assert_mean_zero(random_noise)  # Should cause an error

@@ -324,7 +324,6 @@ def test_sample_normal():
         mu=mu,
         sigma=sigma,
         node_mask=node_mask,
-        fix_noise=False,
     )
     assert output.shape == mu.shape
 

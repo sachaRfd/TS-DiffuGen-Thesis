@@ -8,8 +8,17 @@ import numpy as np
 import sys
 
 
+"""
+
+This script contains the functions to evaluate generated samples wit groud truth ones.
+
+
+This file is tested.
+"""  # noqa
+
+
 def get_paths(sample_path):
-    """# noqa
+    """
     Load molecule files from a sample path and organize them into true and generated samples.
 
     Args:
@@ -17,7 +26,7 @@ def get_paths(sample_path):
 
     Returns:
         tuple: Two lists containing true and generated sample file paths.
-    """
+    """  # noqa
 
     # Check that the path exists:
     assert os.path.exists(sample_path)
@@ -58,7 +67,7 @@ def get_paths(sample_path):
 
 
 def import_xyz_file(molecule_path, RMSD=False):
-    """# noqa
+    """
     Import an XYZ file as an RDKit molecule object.
 
     Args:
@@ -67,7 +76,7 @@ def import_xyz_file(molecule_path, RMSD=False):
 
     Returns:
         Chem.Mol or None: RDKit molecule object or None if loading fails.
-    """
+    """  # noqa
 
     if RMSD:
         mol = Chem.rdmolfiles.MolFromXYZFile(molecule_path)
@@ -97,7 +106,7 @@ def import_xyz_file(molecule_path, RMSD=False):
 
 
 def create_lists(original_path, RMSD=False):
-    """# noqa
+    """
     Create lists of true and generated molecules from the given path.
 
     Args:
@@ -106,7 +115,7 @@ def create_lists(original_path, RMSD=False):
 
     Returns:
         tuple: Two lists containing RDKit molecule objects.
-    """
+    """  # noqa
     true_paths, generated_paths = get_paths(original_path)
 
     # First we deal with getting the list of true samples:
@@ -189,7 +198,7 @@ def calculate_best_rmse(
     max_iters=100_000,
     use_hydrogens=False,
 ):
-    """# noqa
+    """
     Calculate Best RMSD between RDKit Molecule Objects.
 
     Args:
@@ -200,7 +209,7 @@ def calculate_best_rmse(
 
     Returns:
         float: Best RMSD value.
-    """
+    """  # noqa
     # Check that the two molecules have the same atoms:
     gen_atoms = list(atom.GetSymbol() for atom in gen_mol.GetAtoms())
     ref_atoms = list(atom.GetSymbol() for atom in ref_mol.GetAtoms())
@@ -221,7 +230,7 @@ def calculate_best_rmse(
 
 
 def create_table(true_mols, gen_mols, max_iters=1, metric="RMSD"):
-    """# noqa
+    """
     Create comparison table between molecules.
 
     Args:
@@ -232,7 +241,7 @@ def create_table(true_mols, gen_mols, max_iters=1, metric="RMSD"):
 
     Returns:
         pd.DataFrame: DataFrame of comparison metrics.
-    """
+    """  # noqa
     assert metric in [
         "RMSD",
         "DMAE",
@@ -340,7 +349,8 @@ def main():
             print("Error: Specified sample path does not exist.")
             return
     else:
-        sample_path = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_cosine_1000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Samples"  # noqa
+        print("Please provide a path to Samples please")
+        exit()
 
     # Sample Cov 0.1:
     cov_threshold = 0.1

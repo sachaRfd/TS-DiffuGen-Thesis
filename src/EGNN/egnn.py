@@ -1,19 +1,5 @@
 # Sacha Raffaud sachaRfd and acse-sr1022
 
-"""    # noqa
-Script for Equivariant Graph Neural Networks:
----------------------------------------------
-
-Code was adapted from https://github.com/ehoogeboom/e3_diffusion_for_molecules/blob/main/egnn/models.py
-
-
-Main Adaptations: 
-    1. Clearn up code
-    2. Debug
-    3. Allowed for setting up training and Proof of Concept
-    4. Adapted code to allow for extra edge-attributes (edge features to be added) --> Check Other EGNN script for this
-"""
-
 from torch import nn
 import torch
 import math
@@ -22,12 +8,28 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from src.EGNN.utils import setup_device
 
-
 from data.Dataset_W93.dataset_class import W93_TS
 
 
+"""
+
+This file contains the different classes required to create the 
+equivariant graph neural network.
+
+The code was adapted from the original work:
+https://github.com/ehoogeboom/e3_diffusion_for_molecules/blob/main/egnn/models.py
+
+Adaptations include cleaning up and debugging, as well as adapting the code for
+a denoising implementation.
+
+
+This script still contains the proof-of-concept experiment where noise is 
+predicted by an EGNN model. May require modifications with downstream adaptations.
+"""  # noqa
+
+
 class GCL(nn.Module):
-    """# noqa
+    """
     Graph Convolutional Layer (GCL) module.
 
     Args:
@@ -40,7 +42,7 @@ class GCL(nn.Module):
         nodes_att_dim (int): Dimensionality of additional node attributes.
         act_fn (nn.Module): Activation function applied to MLP layers.
         attention (bool): Whether to apply attention mechanism.
-    """
+    """  # noqa
 
     def __init__(
         self,
@@ -131,7 +133,7 @@ class GCL(nn.Module):
 
 
 class EquivariantUpdate(nn.Module):
-    """#noqa
+    """
     Equivariant Update module for EGNN.
 
     Args:
@@ -142,7 +144,7 @@ class EquivariantUpdate(nn.Module):
         act_fn (nn.Module): Activation function applied to MLP layers.
         tanh (bool): Whether to apply hyperbolic tangent to coordinates.
         coords_range (float): Range of coordinate values.
-    """
+    """  # noqa
 
     def __init__(
         self,
@@ -225,7 +227,7 @@ class EquivariantUpdate(nn.Module):
 
 
 class EquivariantBlock(nn.Module):
-    """# noqa
+    """
     Equivariant Block module for EGNN.
 
     Args:
@@ -242,7 +244,7 @@ class EquivariantBlock(nn.Module):
         sin_embedding (nn.Module): Sinusoid embedding for distances.
         normalization_factor (int): Normalization factor for aggregation.
         aggregation_method (str): Aggregation method for aggregating edge information.
-    """
+    """  # noqa
 
     def __init__(
         self,
@@ -329,7 +331,7 @@ class EquivariantBlock(nn.Module):
 
 
 class EGNN(nn.Module):
-    """# noqa
+    """
     Equivariant Graph Neural Network (EGNN) module.
 
     Args:
@@ -349,7 +351,7 @@ class EGNN(nn.Module):
         sin_embedding (bool): Whether to use sinusoid embeddings.
         normalization_factor (int): Normalization factor for aggregation.
         aggregation_method (str): Aggregation method for aggregating edge information.
-    """
+    """  # noqa
 
     def __init__(
         self,
@@ -433,14 +435,14 @@ class EGNN(nn.Module):
 
 
 class SinusoidsEmbeddingNew(nn.Module):
-    """# noqa
+    """
     Sinusoidal embedding module for EGNN.
 
     Args:
         max_res (float): Maximum resolution.
         min_res (float): Minimum resolution.
         div_factor (int): Division factor.
-    """
+    """  # noqa
 
     def __init__(self, max_res=15.0, min_res=15.0 / 2000.0, div_factor=4):
         super().__init__()
@@ -461,7 +463,7 @@ class SinusoidsEmbeddingNew(nn.Module):
 
 
 def coord2diff(x, edge_index, norm_constant=1):
-    """# noqa
+    """
     Converts node coordinates to differences and radial distances.
 
     Args:
@@ -472,7 +474,7 @@ def coord2diff(x, edge_index, norm_constant=1):
     Returns:
         Tensor: Radial distances.
         Tensor: Coordinate differences.
-    """
+    """  # noqa
     row, col = edge_index
     coord_diff = x[row] - x[col]
     radial = torch.sum((coord_diff) ** 2, 1).unsqueeze(1)
@@ -488,7 +490,7 @@ def unsorted_segment_sum(
     normalization_factor: int,
     aggregation_method: str = "sum",  # noqa
 ):
-    """# noqa
+    """
     Performs unsorted segment sum operation with normalization.
 
     Args:
@@ -500,7 +502,7 @@ def unsorted_segment_sum(
 
     Returns:
         Tensor: Result of the operation.
-    """
+    """  # noqa
 
     assert aggregation_method in [
         "sum",
@@ -525,7 +527,7 @@ def unsorted_segment_sum(
 
 # Added extra to create the edges:
 def get_edges(n_nodes):
-    """# noqa
+    """
     Generates edges for a graph with a given number of nodes.
 
     Args:
@@ -533,7 +535,7 @@ def get_edges(n_nodes):
 
     Returns:
         List: List of rows and columns representing edges.
-    """
+    """  # noqa
 
     rows, cols = [], []
     for i in range(n_nodes):
@@ -547,7 +549,7 @@ def get_edges(n_nodes):
 
 
 def get_edges_batch(n_nodes, batch_size):
-    """noqa
+    """
     Generates edges for a batch of graphs with a given number of nodes.
 
     Args:
@@ -575,7 +577,7 @@ _edges_dict = {}
 
 
 def get_adj_matrix(n_nodes, batch_size, device):
-    """# noqa
+    """
     Generates adjacency matrix for a batch of graphs with a given number of nodes.
 
     Args:
@@ -585,7 +587,7 @@ def get_adj_matrix(n_nodes, batch_size, device):
 
     Returns:
         Tuple: Edge information (edge indices and attributes).
-    """
+    """  # noqa
     if n_nodes in _edges_dict:
         edges_dic_b = _edges_dict[n_nodes]
         if batch_size in edges_dic_b:

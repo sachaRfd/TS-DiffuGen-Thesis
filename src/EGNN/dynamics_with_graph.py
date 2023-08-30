@@ -1,14 +1,5 @@
 # Sacha Raffaud sachaRfd and acse-sr1022
 
-"""# noqa
-Script for EGNN denoising model which only contains reactant coordinates and graph information about the product: 
---------------------------------
-
-Code was adapted from https://github.com/ehoogeboom/e3_diffusion_for_molecules/blob/main/egnn/models.py
-
-Main adaptations include the dynamics taking edge attributes as inputs.
-"""
-
 import torch
 import torch.nn as nn
 from tqdm import tqdm
@@ -28,6 +19,14 @@ from src.EGNN.utils import (
     assert_mean_zero_with_mask,
     setup_device,
 )
+
+"""
+
+This script is very similar to the other dynamics class. However, this one allows for 
+extra edge attributes to be used within the forward passes. Because of changes to the EGNN
+backbone, this class could not inherit from the other dynamics class.
+
+"""  # noqa
 
 
 class EGNN_dynamics_graph(nn.Module):
@@ -169,12 +168,12 @@ class EGNN_dynamics_graph(nn.Module):
 
 
 if __name__ == "__main__":
-    print("Running Script Model with MASK")
+    print("Running Script")
 
     device = setup_device()
 
     # Load the dataset:
-    dataset = W93_TS_coords_and_reacion_graph(graph_product=True)
+    dataset = W93_TS_coords_and_reacion_graph()
 
     # Calculate the sizes for each split
     dataset_size = len(dataset)
@@ -293,7 +292,6 @@ if __name__ == "__main__":
                 xh=batch.to(device),
                 node_mask=node_masks.to(device),
                 edge_mask=edge_mask.to(device),
-                context=None,
                 edge_attributes=edge_attributes,
             )
             loss = loss_fn(x_final, true_noise.to(device))

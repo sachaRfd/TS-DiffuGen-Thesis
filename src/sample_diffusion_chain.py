@@ -1,13 +1,22 @@
 # Sacha Raffaud sachaRfd and acse-sr1022
 
-""""
-This script it to create samples including their intermediate steps for visualisation as a GIF:   # noqa
-----------------------------------------------------------------------------------------------
-"""
 import os
 import torch
 from src.lightning_setup import LitDiffusionModel
 from Diffusion.saving_sampling_functions import write_xyz_file, return_xyz
+
+"""
+
+This script is an additional file to create visualisations that output samples with less
+and less noise in them. These files can then be used to generate GIFs.
+
+When this script is run, It generates 200 samples from the backward diffusion
+of a diffusion model trained on the TX1 Dataset. These files can then be converted into .png files
+with PyMol and then used to create nice looking GIFs.
+
+This script is not tested within the PyTest framework.
+
+"""  # noqa
 
 
 if __name__ == "__main__":
@@ -16,7 +25,7 @@ if __name__ == "__main__":
     # Setup variables:
     device = "cpu"
 
-    dataset_to_use = "RGD1"
+    dataset_to_use = "TX1"
 
     # Setup Hyper-paremetres:
     learning_rate_schedule = False
@@ -39,35 +48,30 @@ if __name__ == "__main__":
     if no_product:
         in_node_nf -= 3
 
-    out_node = 3
-    context_nf = 0
-    n_dims = 3
     noise_schedule = "sigmoid_2"
-    loss_type = "l2"
-    timesteps = 1_000
+    timesteps = 2_000
     batch_size = 64
     n_layers = 8
     hidden_features = 64
     lr = 1e-4
     epochs = 1000
-    test_sampling_number = 40
-    save_samples = True
+    test_sampling_number = 1
+    save_samples = False
 
     # Setup models:
-    save_path = "src/Diffusion/RGD1_dataset_weights/False_no_productRGD1_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_False_augment_train_set_8_layers_64_hiddenfeatures_0.001_lr_sigmoid_2_1000_timesteps_256_batch_size_100_epochs_False_Rem_Hydrogens/Sample_chain_5/"  # noqa
+    save_path = "trained_models/pre_trained_diffusion_simple/Sample_chain/"  # noqa
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
     lit_diff_model = LitDiffusionModel(
         dataset_to_use=dataset_to_use,
         in_node_nf=in_node_nf,
-        context_nf=context_nf,
         hidden_features=hidden_features,
-        out_node=out_node,
-        n_dims=n_dims,
         n_layers=n_layers,
         device=device,
         lr=lr,
         remove_hydrogens=remove_hydrogens,
-        test_sampling_number=1,
-        save_samples=False,
+        test_sampling_number=test_sampling_number,
+        save_samples=save_samples,
         save_path=save_path,
         timesteps=timesteps,
         noise_schedule=noise_schedule,
@@ -80,7 +84,9 @@ if __name__ == "__main__":
     )
 
     # Load weights:
-    model_path = "src/Diffusion/RGD1_dataset_weights/False_no_productRGD1_dataset_False_include_VAN_DER_WAAL_RADII_False_Random_rotations_False_augment_train_set_8_layers_64_hiddenfeatures_0.001_lr_sigmoid_2_1000_timesteps_256_batch_size_100_epochs_False_Rem_Hydrogens/Weights/weights.pth"  # noqa
+    model_path = (
+        "trained_models/pre_trained_diffusion_simple/Weights/weights.pth"  # noqa
+    )
     lit_diff_model.load_state_dict(torch.load(model_path))
 
     # Setup the sample:
@@ -136,7 +142,7 @@ if __name__ == "__main__":
         # Concatenate the atomic composition with the predicted sample:
         predicted_samples = torch.cat([atom_ohe, predicted_samples], dim=2)
         predicted_samples = return_xyz(
-            predicted_samples, dataset=lit_diff_model.dataset
+            predicted_samples, lit_diff_model.dataset.ohe_dict
         )
 
         # Save the file in the example_folder and with the name its Iteration number:  # noqa
@@ -149,7 +155,7 @@ if __name__ == "__main__":
 
     # Save true sample:
     true_sample = torch.cat([atom_ohe, example_x], dim=2)
-    true_sample = return_xyz(true_sample, dataset=lit_diff_model.dataset)
+    true_sample = return_xyz(true_sample, lit_diff_model.dataset.ohe_dict)
     file_name = "true_sample"
     full_path = os.path.join(save_path, f"{file_name}.xyz")
     write_xyz_file(true_sample, full_path)
@@ -157,7 +163,7 @@ if __name__ == "__main__":
     # Save true reactant
     true_reactant = example_sample[:, 4:7].unsqueeze(0)
     true_reactant = torch.cat([atom_ohe, true_reactant], dim=2)
-    true_reactant = return_xyz(true_reactant, dataset=lit_diff_model.dataset)
+    true_reactant = return_xyz(true_reactant, lit_diff_model.dataset.ohe_dict)
     file_name = "true_reactant"
     full_path = os.path.join(save_path, f"{file_name}.xyz")
     write_xyz_file(true_reactant, full_path)
@@ -165,7 +171,7 @@ if __name__ == "__main__":
     # Save true product:
     true_product = example_sample[:, 7:10].unsqueeze(0)
     true_product = torch.cat([atom_ohe, true_product], dim=2)
-    true_product = return_xyz(true_product, dataset=lit_diff_model.dataset)
+    true_product = return_xyz(true_product, lit_diff_model.dataset.ohe_dict)
     file_name = "true_product"
     full_path = os.path.join(save_path, f"{file_name}.xyz")
     write_xyz_file(true_product, full_path)

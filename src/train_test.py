@@ -16,7 +16,42 @@ from src.Diffusion.equivariant_diffusion import get_node_features
 from src.EGNN.utils import setup_device
 
 
+"""
+
+Before training a diffusion model, please make sure your python environment
+initialises WandB accordingly. 
+
+Setting up WandB for smooth training can be done as by inserting your WandB 
+API key inside the wandb_setup.py script located in the root directory and 
+then running that script.
+
+
+This file contains the function for training and testing the diffusion models.
+
+The sampling/testing framework has a test within the PyTest framework, however,
+the training script does not. This is because it requires access to WandB to log
+the losses for model managment.
+
+
+
+"""  # noqa
+
+
 def main(args, pytest_time=False):
+    """
+    Main function to manage training and testing of the diffusion model.
+
+    This function serves as the entry point to the script, allowing for both training and
+    testing modes based on the provided command-line arguments. It sets up the necessary
+    configurations, loads or trains the model, and handles the flow accordingly.
+
+    Args:
+        args (argparse.Namespace): Command-line arguments parsed using argparse.
+        pytest_time (bool, optional): Flag indicating whether the code is being run in a pytest environment (default is False).
+
+    Returns:
+        None
+    """  # noqa
     # Get Variables:
     # In_Nodes:
     in_node_nf = get_node_features(
@@ -316,10 +351,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--wandb_project_name",
         type=str,
-        default="Diffusion_5_layer_2000_timesteps",  # noqa
+        default="Diffusion_5_layer_2000_timesteps",
     )  # Controls the name of the project on WandB
-    # Will have to add stuff on loging in here and stuff --> Look into this later on  # noqa
-    # May have to implement simple tensorboard stuff
 
     parser.add_argument(
         "--test_sampling_number", type=int, default=10

@@ -36,9 +36,24 @@ from pytorch_lightning.callbacks import LearningRateMonitor
 
 
 """
-Script to setup diffusion model using python Lightning
-------------------------------------------------------
-"""
+
+This script contains the pytorch lightning classes for the simple 
+diffusion model, as well as the diffusion model which also takes 
+as input reaction graphs.
+
+Having everything set up inside a pytorch lightning class allows
+for smooth implementation. 
+
+The second lightning class wanted to inherit from the first but 
+certain assertions made it not possible.
+
+
+This file can be used as a script and will train a model depending
+on given hyper-parameters. However, it is recommended to use the 
+train_test.py script for this.
+
+These classes are tested to a certain extent.
+"""  # noqa
 
 
 # Pytorch Lightning class for the diffusion model:
@@ -391,6 +406,25 @@ class LitDiffusionModel(pl.LightningModule):
         remove_hydrogens=False,
         device=None,
     ):
+        """
+        Generate samples from the test set.
+
+        This function generates samples using the diffusion model and performs various processing
+        steps on the provided data. It handles tasks such as inflating the input data, performing sampling,
+        and saving the results.
+
+        Args:
+            true_h (torch.Tensor): The true input graph data (node features and edge features).
+            true_x (torch.Tensor): The true target graph data (node features).
+            node_mask (torch.Tensor): The node mask for the input graph.
+            edge_mask (torch.Tensor): The edge mask for the input graph.
+            folder_path (str): Path to the folder where results will be saved.
+            remove_hydrogens (bool, optional): Flag indicating whether to remove hydrogens from data (default is False).
+            device (torch.device, optional): The device on which to perform computations (default is None).
+
+        Returns:
+        None
+        """  # noqa
         number_samples = self.test_sampling_number
         # Get the true reactant and product - Still hard-coded:
         if remove_hydrogens:
@@ -602,6 +636,7 @@ class LitDiffusionModel(pl.LightningModule):
             )
 
 
+# Same class with reaction graphs as input
 class LitDiffusionModel_With_graph(pl.LightningModule):
     def __init__(
         self,
@@ -1072,10 +1107,6 @@ if __name__ == "__main__":
             no_product=no_product,
             batch_size=batch_size,
         )
-
-    # # Load the weights from initial state:
-    # path_to_load = "src/Diffusion/W93_dataset_weights/False_no_productW93_dataset_Activation_Energy_context_False_Random_rotations_True_augment_train_set_8_layers_64_hiddenfeatures_0.0001_lr_sigmoid_2_1000_timesteps_64_batch_size_2000_epochs_False_Rem_Hydrogens/Weights/weights.pth"  # noqa
-    # lit_diff_model.load_state_dict(torch.load(path_to_load))
 
     # Create WandB logger:
     wandb_logger = pytorch_lightning.loggers.WandbLogger(

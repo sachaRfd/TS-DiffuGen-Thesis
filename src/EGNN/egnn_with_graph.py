@@ -1,16 +1,5 @@
 # Sacha Raffaud sachaRfd and acse-sr1022
 
-"""    # noqa
-Script for Equivariant Graph Neural Networks using coordinates from reactant but graph information from the product:
----------------------------------------------
-
-
-Code was adapted from https://github.com/ehoogeboom/e3_diffusion_for_molecules/blob/main/egnn/models.py
-
-
-Main adaptations include cleaning up and debugging and the EGNN having edge attributes as inputs.
-"""
-
 from torch import nn
 import torch
 from torch.utils.data.dataset import random_split
@@ -30,8 +19,24 @@ from data.Dataset_W93.dataset_reaction_graph import (
 )
 
 
+"""
+
+This adapted EGNN class from the EGNN file.
+The main adaptation being that the EGNN is now able
+to take as input extra edge attributes.
+
+These edge attributes contain information about the 
+reaction graph of the input molecules.
+
+Oringial proof-of-concept was kept in the script for future
+reference. May require slight modifications if certain functions
+are changed.
+
+"""  # noqa
+
+
 class EGNN_with_bond(nn.Module):
-    """# noqa
+    """
     Enhanced Graph Neural Network (EGNN) with Bond Information.
 
     This class defines an EGNN model with support for bond information in addition to node and edge features.
@@ -55,12 +60,7 @@ class EGNN_with_bond(nn.Module):
         sin_embedding (bool, optional): Whether to use sinusoidal embeddings for edge features (default is False).
         normalization_factor (int, optional): Normalization factor for equivariant block's aggregation (default is 100).
         aggregation_method (str, optional): Method for aggregating node information (default is "sum").
-
-    Methods:
-        forward(h, x, edge_index, node_mask=None, edge_mask=None, edge_attributes=None):
-            Forward pass of the EGNN model with bond information.
-
-    """
+    """  # noqa
 
     def __init__(
         self,
@@ -127,9 +127,9 @@ class EGNN_with_bond(nn.Module):
         edge_index,
         node_mask=None,
         edge_mask=None,
-        edge_attributes=None,  # noqa
+        edge_attributes=None,
     ):
-        """# noqa
+        """
         Forward pass of the EGNN_with_bond model.
 
         Args:
@@ -143,7 +143,7 @@ class EGNN_with_bond(nn.Module):
         Returns:
             h (torch.Tensor): Output node features.
             x (torch.Tensor): Output edge features.
-        """
+        """  # noqa
         # Instead of concatenating the distances twice, let's just add information about bonds:     # noqa
         edge_attr = edge_attributes
         # distances, _ = coord2diff(x, edge_index)
@@ -170,7 +170,7 @@ class EGNN_with_bond(nn.Module):
 if __name__ == "__main__":
     print("Running Script")
 
-    dataset = W93_TS_coords_and_reacion_graph(graph_product=True)  # noqa
+    dataset = W93_TS_coords_and_reacion_graph()
 
     # Calculate the sizes for each split
     dataset_size = len(dataset)
@@ -301,68 +301,3 @@ if __name__ == "__main__":
 
         train_loss /= len(train_loader)
         print(f"At epoch {epoch}:\t train_loss = {train_loss}")
-
-    #     egnn.eval()  # Switch to evaluation mode for validation
-    #     with torch.no_grad():
-    #         for batch, node_mask in tqdm(val_loader):
-    #             batch_size = batch.shape[0]
-    #             n_nodes = batch.shape[1]
-
-    #             edge_mask = (node_mask.unsqueeze(1)) * (node_mask.unsqueeze(2))  # noqa
-
-    #             # Create mask for diagonal, as atoms cannot connect to themselves:# noqa
-    #             diag_mask = (
-    #                 ~torch.eye(edge_mask.size(-1), device=edge_mask.device)
-    #                 .unsqueeze(0)
-    #                 .bool()
-    #             )
-
-    #             # Expand to batch size:
-    #             diag_mask = diag_mask.expand(edge_mask.size())
-
-    #             # Multiply the edge mask by the diagonal mask to not have connections with itself:# noqa
-    #             edge_mask *= diag_mask
-    #             edge_mask = edge_mask.view(batch_size * 23 * 23, 1)
-
-    #             h = batch[:, :, :10]
-    #             x = batch[:, :, 10:]
-
-    #             noise = torch.randn_like(x)  # Adding Gaussian noise
-
-    #             noise_mean = torch.mean(noise, dim=1, keepdim=True)
-
-    #             noise = noise - noise_mean
-
-    #             # Mulitply noise  with the node mask
-    #             noise = noise * node_mask.unsqueeze(2).expand(noise.size())
-
-    #             # Reshape the nodemask:
-    #             node_mask = node_mask.view(batch_size * n_nodes, 1)
-
-    #             x_noisy = x + noise
-
-    #             h = h.view(-1, n_feat)
-    #             x_noisy = x_noisy.view(-1, x_dim)
-
-    #             edges = get_adj_matrix(
-    #                 n_nodes=n_nodes, batch_size=batch_size, device=device
-    #             )
-
-    #             edges = [
-    #                 edge.to(device) for edge in edges
-    #             ]  # Convert each tensor in the list to GPU tensor
-
-    #             h_out, x_out = egnn(
-    #                 h.to(device),
-    #                 x_noisy.to(device),
-    #                 edges,
-    #                 node_mask.to(device),
-    #                 edge_mask=edge_mask.to(device),
-    #             )
-
-    #             loss = loss_fn(x_out, noise.view(-1, x_dim).to(device))
-
-    #             val_loss += loss.item()
-
-    #     val_loss /= len(val_loader)
-    #     print(f"At epoch {epoch}:\t val_loss = {val_loss}")

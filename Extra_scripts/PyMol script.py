@@ -3,6 +3,15 @@
 import os
 import pymol
 
+
+"""
+
+This script reads .xyz files created by the diffusion process and returns them as .png
+that can be used for visualisations.
+
+Not Tested as this is a PyMol script and not "Python".
+"""  # noqa
+
 # Start PyMOL and suppress its GUI
 pymol.finish_launching(["pymol", "-q"])
 

@@ -1,15 +1,20 @@
 # Sacha Raffaud sachaRfd and acse-sr1022
 
-"""
-This is the script to evaluate our diffusion model using python Lightning
--------------------------------------------------------------------------
-"""
 import pytorch_lightning as pl
 import torch
 from src.EGNN import dynamics
 
 from src.lightning_setup import LitDiffusionModel, LitDiffusionModel_With_graph
 from src.Diffusion.equivariant_diffusion import get_node_features
+
+
+"""
+
+This file can be used as a testing script for a trained diffusion model.
+This is an older file and the testing/sampling can now be done directly using
+the train_test.py file.
+
+"""
 
 
 def test_model(model, logger):

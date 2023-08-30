@@ -1,20 +1,5 @@
 # Sacha Raffaud sachaRfd and acse-sr1022
 
-"""
-
-Script for Equivariant diffusion model:
----------------------------------------
-
-Code adapted from https://github.com/ehoogeboom/e3_diffusion_for_molecules/blob/main/equivariant_diffusion/en_diffusion.py
-
-Adaptations:
-1. Cleaned whole script
-    1.1 Removed unused functions and asserts
-    1.2 Removed Variational-Lower-Bound Loss as not used
-    1.4 Seperated functions for modularity
-2. Changed so Noising on H is not re-integrated into the model - as we are only trying to predict X part of xH     # noqa
-"""
-
 import os
 
 import numpy as np
@@ -40,6 +25,31 @@ from torch import expm1
 from torch.nn.functional import softplus
 
 
+"""
+
+This script contains the classes for 2 diffusion models. 
+The first class repreents the simple diffusion model that does not use 
+reaction graphs during training and inference.
+
+The second inherits from the first but includes slight changes that 
+allow it to use edge attributes during training.
+
+The diffusion backbone was adapted from the following repo:
+https://github.com/ehoogeboom/e3_diffusion_for_molecules/blob/main/equivariant_diffusion/en_diffusion.py
+
+The adaptations include cleaning the whole script, removing functions
+and methods and making everything a bit more modular. Noising was also 
+adapted to not be performed with H node features, as we are only trying to
+predict X part of Xh.
+
+
+This file also includes get_node_features function which controls how many node features are included
+in the different diffusion processes.
+
+
+"""  # noqa
+
+
 class DiffusionModel(torch.nn.Module):
     """
     The E(n) Diffusion Module.
@@ -60,7 +70,7 @@ class DiffusionModel(torch.nn.Module):
         # Setup CPU-GPU:
         self.device = device
 
-        # MSE is used as the L_simple from paper:
+        # MSE is used as the loss function from paper:
         self.mse = MSELoss()
 
         # Setup the noise schedule and get Gamma Values:
@@ -71,10 +81,9 @@ class DiffusionModel(torch.nn.Module):
         # Denoising EGNN Network:
         self.dynamics = dynamics
 
-        # Setup EGNN variables:
+        # Setup variables:
         self.in_node_nf = in_node_nf
         self.n_dims = n_dims
-        self.num_classes = self.in_node_nf
 
         # Number of Sampling Timesteps:
         self.T = timesteps
@@ -82,10 +91,15 @@ class DiffusionModel(torch.nn.Module):
         # Not sure what is the use.
         self.register_buffer("buffer", torch.zeros(1))
 
-        # Check that the noise schedule allows for the total noising process to reach Gaussian Noise:# noqa
+        # Check that the noise schedule allows for the total noising process
+        #  to reach Gaussian Noise:
         self.check_issues_norm_values()
 
     def check_issues_norm_values(self, num_stdevs=8):
+        """
+        Checks that the number of timesteps is large enough
+        to converge to white noise.
+        """
         zeros = torch.zeros((1, 1))
         gamma_0 = self.gamma(zeros)
         sigma_0 = self.sigma(gamma_0, target_tensor=zeros).item()
@@ -97,35 +111,46 @@ class DiffusionModel(torch.nn.Module):
 
     def phi(self, x, t, node_mask, edge_mask):
         """
-        Function to get Predicted noise
+        Function to get Predicted noise from denoising model.
         """
+        # Predicted H is not needed in conformation generation
         _, net_out = self.dynamics._forward(
             t,
             x,
             node_mask,
             edge_mask,
-        )  # Predicted H is USELESS IN our use-case
-        EGNN_utils.assert_mean_zero_with_mask(
-            net_out, node_mask.unsqueeze(2).expand(net_out.size())
         )
         return net_out
 
     def inflate_batch_array(self, array, target):
         """
-        Inflates the batch array (array) with only a single axis (i.e. shape = (batch_size,), or possibly more empty    # noqa
-        axes (i.e. shape (batch_size, 1, ..., 1)) to match the target shape.
-        """
+        Inflates the batch array (array) with only a single axis (i.e. shape = (batch_size,),
+        or possibly more empty axes (i.e. shape (batch_size, 1, ..., 1))
+        to match the target shape.
+        """  # noqa
         target_shape = (array.size(0),) + (1,) * (len(target.size()) - 1)
         return array.view(target_shape)
 
     def sigma(self, gamma, target_tensor):
-        """Computes sigma given gamma."""
+        """
+        Computes sigma given gamma.
+
+        The sigma variable controls how much noise is
+        added at a given timestep.
+        """
         return self.inflate_batch_array(
-            torch.sqrt(torch.sigmoid(gamma)), target_tensor
-        )  # noqa
+            torch.sqrt(torch.sigmoid(gamma)),
+            target_tensor,
+        )
 
     def alpha(self, gamma, target_tensor):
-        """Computes alpha given gamma."""
+        """
+        Computes alpha given gamma.
+
+        The alpha variable controls how much of the
+        original sample is kept at a given
+        timestep.
+        """
         return self.inflate_batch_array(
             torch.sqrt(torch.sigmoid(-gamma)), target_tensor
         )
@@ -138,15 +163,15 @@ class DiffusionModel(torch.nn.Module):
         self,
         gamma_t: torch.Tensor,
         gamma_s: torch.Tensor,
-        target_tensor: torch.Tensor,  # noqa
+        target_tensor: torch.Tensor,
     ):
         """
-        Computes sigma t given s, using gamma_t and gamma_s. Used during sampling.# noqa
+        Computes sigma t given s, using gamma_t and gamma_s. Used during sampling.
 
         These are defined as:
             alpha t given s = alpha t / alpha s,
-            sigma t given s = sqrt(1 - (alpha t given s) ^2 ).
-        """
+            sigma t given s = sqrt(1 - (alpha t given s) ^2).
+        """  # noqa
         sigma2_t_given_s = self.inflate_batch_array(
             -expm1(softplus(gamma_s) - softplus(gamma_t)), target_tensor
         )
@@ -164,7 +189,7 @@ class DiffusionModel(torch.nn.Module):
         sigma_t_given_s = torch.sqrt(sigma2_t_given_s)
         return sigma2_t_given_s, sigma_t_given_s, alpha_t_given_s
 
-    def compute_x_pred(self, net_out, zt, gamma_t, final=False):
+    def compute_x_pred(self, net_out, zt, gamma_t):
         """Commputes x_pred, i.e. the most likely prediction of x."""
         sigma_t = self.sigma(gamma_t, target_tensor=net_out)
         alpha_t = self.alpha(gamma_t, target_tensor=net_out)
@@ -199,7 +224,7 @@ class DiffusionModel(torch.nn.Module):
             -log_sigma_x.to(self.device) - 0.5 * np.log(2 * np.pi)
         )
 
-    def sample_p_xh_given_z0(self, z0, node_mask, edge_mask, fix_noise=False):
+    def sample_p_xh_given_z0(self, z0, node_mask, edge_mask):
         """Samples x ~ p(x|z0)."""
         zeros = torch.zeros(size=(z0.size(0), 1), device=z0.device)
         gamma_0 = self.gamma(zeros)
@@ -225,14 +250,15 @@ class DiffusionModel(torch.nn.Module):
             mu=mu_x.to(self.device),
             sigma=sigma_x.to(self.device),
             node_mask=node_mask.to(self.device),
-            fix_noise=fix_noise,
         )
 
         return x
 
-    def sample_normal(self, mu, sigma, node_mask, fix_noise=False):
-        """Samples from a Normal distribution."""
-        bs = 1 if fix_noise else mu.size(0)
+    def sample_normal(self, mu, sigma, node_mask):
+        """
+        Samples from a Normal distribution and returns the noisy X_t sample.
+        """
+        bs = mu.size(0)
         eps = self.sample_position(bs, mu.size(1), node_mask)
 
         return mu + sigma * eps
@@ -248,17 +274,10 @@ class DiffusionModel(torch.nn.Module):
         )
         return z_x
 
-    def compute_loss(self, x, h, node_mask, edge_mask, t0_always):
-        """Computes an estimator for the variational lower bound, or the simple loss (MSE)."""  # noqa
+    def compute_loss(self, x, h, node_mask, edge_mask):
+        """Computes the loss using simple MSE loss."""
 
-        # This part is about whether to include loss term 0 always.
-        if t0_always:
-            # loss_term_0 will be computed separately.
-            # estimator = loss_0 + loss_t,  where t ~ U({1, ..., T})
-            lowest_t = 1
-        else:
-            # estimator = loss_t,           where t ~ U({0, ..., T})
-            lowest_t = 0
+        lowest_t = 0
 
         # Sample a timestep t.
         t_int = torch.randint(
@@ -309,9 +328,9 @@ class DiffusionModel(torch.nn.Module):
 
     def forward(self, x, h, node_mask=None, edge_mask=None):
         """
-        Computes the loss (type l2 or NLL) if training. And if eval then always computes NLL.           # noqa
-        """
-        loss = self.compute_loss(x, h, node_mask, edge_mask, t0_always=False)
+        Computes the loss (type l2 or NLL) if training. And if eval then always computes NLL.
+        """  # noqa
+        loss = self.compute_loss(x, h, node_mask, edge_mask)
 
         neg_log_pxh = loss
 
@@ -327,7 +346,6 @@ class DiffusionModel(torch.nn.Module):
         zt,
         node_mask,
         edge_mask,
-        fix_noise=False,
     ):
         """Samples from zs ~ p(zs | zt). Only used during sampling."""
         gamma_s = self.gamma(s)
@@ -368,7 +386,6 @@ class DiffusionModel(torch.nn.Module):
             mu.to(self.device),
             sigma.to(self.device),
             node_mask.to(self.device),
-            fix_noise,
         )
 
         # Project down to avoid numerical runaway of the center of gravity.
@@ -395,7 +412,6 @@ class DiffusionModel(torch.nn.Module):
         node_mask,
         edge_mask,
         context_size=0,
-        fix_noise=False,
     ):
         """
         Draw samples from the generative model.
@@ -404,11 +420,7 @@ class DiffusionModel(torch.nn.Module):
         # Predefined_h compared to theirs
         predefined_h = h
 
-        if fix_noise:
-            # Noise is broadcasted over the batch axis, useful for visualizations.# noqa
-            z = self.sample_position(1, n_nodes, node_mask)
-        else:
-            z = self.sample_position(n_samples, n_nodes, node_mask)
+        z = self.sample_position(n_samples, n_nodes, node_mask)
 
         # Concatenate the predefined H:
         z = torch.cat([predefined_h.to(self.device), z.to(self.device)], dim=2)
@@ -484,8 +496,8 @@ class DiffusionModel(torch.nn.Module):
         context_size=0,
     ):
         """
-        Draw samples from the generative model, keep the intermediate states for visualization purposes.# noqa
-        """
+        Draw samples from the generative model, keep the intermediate states for visualization purposes.
+        """  # noqa
 
         predefined_h = h.to(self.device)
 
@@ -583,15 +595,13 @@ class DiffusionModel_graph(DiffusionModel):
         )
 
     def phi(self, x, t, node_mask, edge_mask, edge_attributes):
+        # Predicting updated node features is not important.
         _, net_out = self.dynamics._forward(
             t,
             x,
             node_mask,
             edge_mask,
-            edge_attributes=edge_attributes,  # Predicted H is USELESS IN our use-case # noqa
-        )
-        EGNN_utils.assert_mean_zero_with_mask(
-            net_out, node_mask.unsqueeze(2).expand(net_out.size())
+            edge_attributes=edge_attributes,
         )
         return net_out
 
@@ -601,7 +611,6 @@ class DiffusionModel_graph(DiffusionModel):
         node_mask,
         edge_mask,
         edge_attributes=None,
-        fix_noise=False,
     ):
         """Samples x ~ p(x|z0)."""
         zeros = torch.zeros(size=(z0.size(0), 1), device=z0.device)
@@ -629,7 +638,6 @@ class DiffusionModel_graph(DiffusionModel):
             mu=mu_x.to(self.device),
             sigma=sigma_x.to(self.device),
             node_mask=node_mask.to(self.device),
-            fix_noise=fix_noise,
         )
 
         return x
@@ -641,18 +649,9 @@ class DiffusionModel_graph(DiffusionModel):
         node_mask,
         edge_mask,
         edge_attributes,
-        t0_always,
     ):
-        """Computes an estimator for the variational lower bound, or the simple loss (MSE)."""  # noqa
-
-        # This part is about whether to include loss term 0 always.
-        if t0_always:
-            # loss_term_0 will be computed separately.
-            # estimator = loss_0 + loss_t,  where t ~ U({1, ..., T})
-            lowest_t = 1
-        else:
-            # estimator = loss_t,           where t ~ U({0, ..., T})
-            lowest_t = 0
+        """Computes the the simple loss (MSE)."""
+        lowest_t = 0
 
         # Sample a timestep t.
         t_int = torch.randint(
@@ -721,14 +720,12 @@ class DiffusionModel_graph(DiffusionModel):
             node_mask,
             edge_mask,
             edge_attributes=edge_attributes,
-            t0_always=False,
         )
 
         neg_log_pxh = loss
 
         # Correct for normalization on x.
         neg_log_pxh = neg_log_pxh.to(self.device)
-
         return neg_log_pxh
 
     def sample_p_zs_given_zt(
@@ -739,7 +736,6 @@ class DiffusionModel_graph(DiffusionModel):
         node_mask,
         edge_mask,
         edge_attributes=None,
-        fix_noise=False,
     ):
         """Samples from zs ~ p(zs | zt). Only used during sampling."""
         gamma_s = self.gamma(s)
@@ -786,7 +782,6 @@ class DiffusionModel_graph(DiffusionModel):
             mu.to(self.device),
             sigma.to(self.device),
             node_mask.to(self.device),
-            fix_noise,
         )
 
         # Project down to avoid numerical runaway of the center of gravity.
@@ -813,20 +808,14 @@ class DiffusionModel_graph(DiffusionModel):
         n_nodes,
         node_mask,
         edge_mask,
-        fix_noise=False,
     ):
         """
         Draw samples from the generative model.
         """
-
         # Predefined_h compared to theirs
         predefined_h = h
 
-        if fix_noise:
-            # Noise is broadcasted over the batch axis, useful for visualizations.# noqa
-            z = self.sample_position(1, n_nodes, node_mask)
-        else:
-            z = self.sample_position(n_samples, n_nodes, node_mask)
+        z = self.sample_position(n_samples, n_nodes, node_mask)
 
         # Concatenate the predefined H:
         z = torch.cat([predefined_h.to(self.device), z.to(self.device)], dim=2)
@@ -855,7 +844,6 @@ class DiffusionModel_graph(DiffusionModel):
                 node_mask.to(self.device),
                 edge_mask.to(self.device),
                 edge_attributes,
-                fix_noise=fix_noise,
             )
 
         # Finally sample p(x, h | z_0).
@@ -864,7 +852,6 @@ class DiffusionModel_graph(DiffusionModel):
             node_mask.to(self.device),
             edge_mask.to(self.device),
             edge_attributes,
-            fix_noise=fix_noise,
         )
 
         EGNN_utils.assert_mean_zero_with_mask(
@@ -888,26 +875,25 @@ def get_node_features(
     include_context=False,
     no_product=False,
 ):
-    """# noqa
-    Function that returns the correct variables depending on variables used
-
-    If hydrogens are kept:
-    h = [OHE_1, OHE_2, OHE_3, OHE_4, Rx, Ry, Rz, Px, Py, Pz] + [t] --> 11
-    else:
-    h = [OHE_1, OHE_2, OHE_3, Rx, Ry, Rz, Px, Py, Pz] + [t] --> 10
-
-    If context is included:
-    h = [OHE_1, OHE_2, OHE_3, OHE_4, Context, Rx, Ry, Rz, Px, Py, Pz] + [t] --> 10 or 11 + 1
-
-    If No_product:
-    h = [OHE_1, OHE_2, OHE_3, OHE_4, Context, Rx, Ry, Rz] + [t] --> 10 or 8 + 1
-
-
-    remove_hydrogens: If hydrogens have been removed --> Should not include a 4d OHE
-    Include context: Should add 1 dimension for the context information
-
     """
-    #  Time embedding is added:
+    Determine the number of node features based on input options.
+
+    This function calculates the number of node features for a given molecular node based on
+    the input options provided. The node features are determined by the presence or absence
+    of hydrogen atoms, inclusion of context information, and the no_product option.
+
+    Args:
+        remove_hydrogens (bool, optional): If True, hydrogens are removed, and the resulting
+            node features will not include a 4D one-hot encoding for hydrogen positions.
+        include_context (bool, optional): If True, an additional dimension for context information
+            is added to the node features.
+        no_product (bool, optional): If True, a few dimensions are excluded from the node features
+            to account for the no_product option.
+
+    Returns:
+        int: The calculated number of node features based on the provided options.
+    """  # noqa
+    # Time embedding is already included
     if remove_hydrogens:
         in_node_nf = 10
     else:

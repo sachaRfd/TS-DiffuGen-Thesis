@@ -1,22 +1,5 @@
 # Sacha Raffaud sachaRfd and acse-sr1022
 
-"""# noqa
-Script for EGNN denoising model: 
---------------------------------
-
-Code was adapted from https://github.com/ehoogeboom/e3_diffusion_for_molecules/blob/main/egnn/models.py
-
-Main adaptations: 
-    1. Clean code
-    2. Debugged - adapted:
-    - Removed un-used functions and classes
-    - Made redundant the updated features (using underscore)
-    3. Proof of concept can be seen in script
-
-
-Scripts also contains code to sample from dataset and then add random noise to it to see if the model is able to predict it. 
-"""
-
 import torch
 import torch.nn as nn
 from torch_geometric.loader import DataLoader
@@ -32,6 +15,23 @@ from src.EGNN.utils import (
     assert_mean_zero_with_mask,
     setup_device,
 )
+
+
+"""
+This file includes the EGNN_dynamics class. This class basically wraps around an EGNN
+so that it can be used within a denoising framework. 
+
+This code was adapted from:
+https://github.com/ehoogeboom/e3_diffusion_for_molecules/blob/main/egnn/models.py
+
+Adaptations include debugging and cleaning up, as well as removing un-used variables 
+and methods as well as formulating the functions for our desired output: Updated coordinates.
+
+
+
+Original proof-of-concept code was kept for future reference. Slight modifications may be required
+with changes to classes.
+"""  # noqa
 
 
 class EGNN_dynamics_QM9(nn.Module):
@@ -170,7 +170,7 @@ class EGNN_dynamics_QM9(nn.Module):
 
 
 if __name__ == "__main__":
-    print("Running Script Model with MASK")
+    print("Running Script")
 
     device = setup_device()
 

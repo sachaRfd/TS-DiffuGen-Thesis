@@ -3,6 +3,16 @@
 import os
 import pymol
 
+"""
+
+This script reads is similar to the previous pymol script, however,
+it reads all the generated samples, and then overlaps them with the true samples. 
+This allows for a clear overlap image to be produced for visualisation purposes.
+
+
+Not Tested as this is a PyMol script and not "Python".
+"""  # noqa
+
 # Start PyMOL and suppress its GUI
 pymol.finish_launching(["pymol", "-q"])
 
