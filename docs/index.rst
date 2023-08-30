@@ -12,4 +12,3 @@ This is the documentation for the TS-DiffuGen Package.
    :caption: Source Files
    
    ts_diff
-   src/*.py

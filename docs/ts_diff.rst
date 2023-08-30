@@ -5,25 +5,21 @@ Evaluate Script:
 ----------------
 
 .. automodule:: src.evaluate_samples
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members: 
+   :inherited-members:
+   :undoc-members:
+   :show-inheritance:
+   :noindex:
 
 
 Lightning Setup: 
 ----------------
 
 .. automodule:: src.lightning_setup
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members: 
+   :inherited-members:
+   :undoc-members:
+   :show-inheritance:
+   :noindex:
 
 
-
-Module contents
----------------
-
-.. automodule:: src
-    :members:
-    :undoc-members:
-    :show-inheritance:
