@@ -135,10 +135,13 @@ def main(args, pytest_time=False):
         assert os.path.exists(
             folder_name
         ), f"{folder_name} Folder Path is Incorrect"  # noqa
-        assert os.path.exists(sample_path), "The Sample folder is not present"
         assert os.path.exists(
             model_path_saved
         ), "The Saved Weights are not present"  # noqa
+
+        # If the weights are present then can create samples directory if not present:if not os.path.exists()
+        if not os.path.exists(sample_path):
+            os.mkdir(sample_path)
 
         # Check that there are no samples in the sample path:
         assert not os.listdir(sample_path), "The Sample folder is not empty"
