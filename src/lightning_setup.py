@@ -824,15 +824,27 @@ class LitDiffusionModel_With_graph(pl.LightningModule):
 
         # Set model to evaluation mode (Faster computations and no data-leakage):  # noqa
         self.diffusion_model.eval()
+
         # Sample
-        samples = self.diffusion_model.sample(
-            inflated_h,
-            edge_attributes,
-            number_samples,
-            23,
-            node_mask.to(device),
-            edge_mask.to(device),
-        )
+        if self.pytest_time:
+            # Sample
+            samples = self.diffusion_model.sample(
+                inflated_h,
+                edge_attributes,
+                number_samples,
+                16,  # Samples used in pytests are smaller in size
+                node_mask.to(device),
+                edge_mask.to(device),
+            )
+        else:
+            samples = self.diffusion_model.sample(
+                inflated_h,
+                edge_attributes,
+                number_samples,
+                23,
+                node_mask.to(device),
+                edge_mask.to(device),
+            )
 
         # Round to prevent downstream type issues in RDKit:
         true_x = torch.round(true_x, decimals=3)

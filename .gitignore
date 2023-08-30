@@ -20,6 +20,8 @@ src/Diffusion/RGD1_dataset_weights/
 
 old_Struff
 
+# Remove pbs scripts
+*.pbs
 
 weights_and_samples/
 data/Dataset_W93/stereo_mols

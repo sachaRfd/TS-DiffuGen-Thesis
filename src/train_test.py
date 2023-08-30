@@ -14,7 +14,7 @@ from src.Diffusion.equivariant_diffusion import get_node_features
 from src.EGNN.utils import setup_device
 
 
-def main(args):
+def main(args, pytest_time=False):
     # Get Variables:
     # In_Nodes:
     in_node_nf = get_node_features(
@@ -37,7 +37,9 @@ def main(args):
 
     if args.train_test == "train":
         # If in training mode - Check that the path is not already present:
-        assert folder_name not in os.listdir(), "Folder already exists"  # noqa
+        assert (
+            folder_name not in os.listdir()
+        ), f"{folder_name} Folder already exists"  # noqa
 
         if not os.path.exists(folder_name):
             os.makedirs(folder_name)
@@ -66,6 +68,7 @@ def main(args):
                 learning_rate_schedule=args.learning_rate_scheduler,
                 no_product=args.remove_product,
                 batch_size=args.batch_size,
+                pytest_time=pytest_time,  # ADDED HERE CHECK IT WORKS
             )
 
         else:
@@ -89,6 +92,7 @@ def main(args):
                 learning_rate_schedule=args.learning_rate_scheduler,
                 no_product=args.remove_product,
                 batch_size=args.batch_size,
+                pytest_time=pytest_time,  # ADDED HERE CHECK IT WORKS
             )
 
         # Setup the WandB Logger:
@@ -128,7 +132,9 @@ def main(args):
 
     elif args.train_test == "test":
         # Check that the folders exist:
-        assert os.path.exists(folder_name), "Folder Path is Incorrect"
+        assert os.path.exists(
+            folder_name
+        ), f"{folder_name} Folder Path is Incorrect"  # noqa
         assert os.path.exists(sample_path), "The Sample folder is not present"
         assert os.path.exists(
             model_path_saved
@@ -155,6 +161,7 @@ def main(args):
                 learning_rate_schedule=args.learning_rate_scheduler,
                 no_product=args.remove_product,
                 batch_size=args.batch_size,
+                pytest_time=pytest_time,  # ADDED HERE CHECK IT WORKS
             )
 
         else:
@@ -178,6 +185,7 @@ def main(args):
                 learning_rate_schedule=args.learning_rate_scheduler,
                 no_product=args.remove_product,
                 batch_size=args.batch_size,
+                pytest_time=pytest_time,  # ADDED HERE CHECK IT WORKS
             )
 
         # Load the State Dict:

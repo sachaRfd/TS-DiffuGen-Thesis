@@ -19,7 +19,7 @@ remove_product: False
 
 # Training Variables: 
 lr: 0.0001
-epochs: 10
+epochs: 2
 batch_size: 64
 learning_rate_scheduler: False 
 model_name: cool_Diffusion_model 
@@ -29,7 +29,7 @@ folder_name: Example_Name
 wandb_project_name: Diffusion_TEST_123
 
 # Model Variables: 
-n_layers: 8
+n_layers: 1
 hidden_features: 64 
 
 

@@ -29,7 +29,7 @@ folder_name: Example_Name
 wandb_project_name: Diffusion_TEST_123
 
 # Model Variables: 
-n_layers: 8
+n_layers: 1
 hidden_features: 64 
 
 # Testing Variable: 
