@@ -25,6 +25,20 @@ In this project, transition state optimization involves generating accurate 3D r
   </div>
 </div>
 
+
+<div style="display: flex; justify-content: center;">
+  <div style="margin-right: 10px;">
+    <img src="visualisations/gifs/sample_5_1x.gif" alt="example gif" width="300">
+  </div>
+  <div>
+    <figure style="margin: 0;">
+      <img src="visualisations/gifs/sample_4_1x.gif" alt="example gif" width="300">
+      <figcaption style="text-align: center;"></figcaption>
+    </figure>
+  </div>
+</div>
+
+
 ### Equivariant Graph Neural Networks (EGNN)
 
 EGNNs are graph neural networks (GNN) that maintain equivariance to transformations. This means that the output of the network transforms in the same manner as the input when transformed prior to feeding it into the GNN.
@@ -283,7 +297,8 @@ To utilize PyMol for visualization:
 
 Testing for this project has been conducted using the PyTest framework. Thorough testing has been performed on the W93 dataset. Testing for the other two datasets requires the download of `.h5` files.
 
-The primary functions, classes, and methods from all other scripts have been rigorously tested and can be found in the `/tests` directory. These tests should pass within this repository's workflow. If you wish to re-run these tests locally, execute the following command:
+All critical functions, classes, and methods from various scripts have been rigorously tested and are located in the `/tests` directory. These tests are expected to pass successfully as part of the repository's workflow. If you intend to run these tests on your local machine, execute the following command:
+
 
 ```shell
 pytest tests/
