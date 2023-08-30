@@ -2,7 +2,7 @@ import sys
 import os
 
 
-sys.path.insert(0, os.path.abspath(os.sep.join((os.curdir, "../src"))))  # noqa
+sys.path.insert(0, os.path.abspath(".."))  # Adjust the path to the root directory
 
 
 extensions = [
