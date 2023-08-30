@@ -1,5 +1,7 @@
-autodoc_mock_imports = ["TS_DiffuGen"]
+import sys
+import os
 
+sys.path.insert(0, os.path.abspath(os.sep.join((os.curdir, "../docs"))))  # noqa
 
 # Project information
 project = "TS-DiffuGen"

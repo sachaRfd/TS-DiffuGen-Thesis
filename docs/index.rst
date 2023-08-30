@@ -11,8 +11,8 @@ This is the documentation for the TS-DiffuGen Package.
    :maxdepth: 2
    :caption: Contents:
 
-    src/evaluate_samples
-    src/lightning_setup
+    src/evaluate_samples.py
+    src/lightning_setup.py
 
 .. automodule:: src.evaluate_samples
    :members: 
