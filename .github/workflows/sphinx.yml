@@ -31,16 +31,11 @@ jobs:
       - name: Create Environment and setup
         run: |
           conda env create -f environment.yml
-          conda run -n tsdiff python setup.py install
-
-
-
 
       - name: Install dependencies
         run: |
           pip install --upgrade pip
           pip install sphinx sphinx_rtd_theme
-
 
       - name: Install texlive
         run: |
@@ -49,9 +44,11 @@ jobs:
 
       - name: Build PDF documentation
         run: |
+          source $HOME/miniconda/etc/profile.d/conda.sh
+          conda activate tsdiff
           sphinx-build -b latex docs docs/latex
           cd docs/latex && latexmk -pdf -interaction=nonstopmode -halt-on-error ts-diffugen.tex
-          cp ts-diffugen.pdf  ../TS-DiffuGen_Documentation.pdf
+          cp ts-diffugen.pdf ../TS-DiffuGen_Documentation.pdf
 
       - name: Commit changes
         run: |
