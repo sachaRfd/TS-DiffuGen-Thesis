@@ -2,26 +2,7 @@ import sys
 import os
 
 
-sys.path.insert(0, os.path.abspath("../.."))
-
-
-extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon",  # Optional, for parsing Google-style docstrings
-]
-
-
-# Include both class and module level docstrings
-autodoc_default_options = {
-    "members": True,
-    "undoc-members": True,
-    "show-inheritance": True,
-}
-
-source_suffix = ".rst"
-
-# The master toctree document.
-master_doc = "index"
+sys.path.insert(0, os.path.abspath(os.sep.join((os.curdir, ".."))))
 
 
 # Project information
@@ -30,10 +11,16 @@ author = "Sacha Raffaud"
 version = "2023"
 release = "2023"
 
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.mathjax",
+]
 
 source_suffix = ".rst"
+master_doc = "index"
 exclude_patterns = ["_build"]
-
+autoclass_content = "both"
 
 # Options for LaTeX output
 latex_elements = {"extraclassoptions": "openany,oneside"}
