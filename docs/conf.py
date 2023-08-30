@@ -24,7 +24,6 @@ release = "2023"
 # General configuration
 extensions = [
     "sphinx.ext.autodoc",
-    # "sphinx.ext.napoleon",
 ]
 
 source_suffix = ".rst"

@@ -8,22 +8,7 @@ This is the documentation for the TS-DiffuGen Package.
 
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
+   :caption: Source Files
 
-    modules
-
-.. .. automodule:: src.evaluate_samples
-..    :members: 
-..    :inherited-members:
-..    :undoc-members:
-..    :show-inheritance:
-..    :noindex:
-
-
-.. .. automodule:: src.lightning_setup
-..    :members: 
-..    :inherited-members:
-..    :undoc-members:
-..    :show-inheritance:
-..    :noindex:
+   src/*.py
