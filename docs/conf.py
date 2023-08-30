@@ -2,10 +2,22 @@ import sys
 import os
 
 
-sys.path.insert(0, os.path.abspath("../docs"))
+sys.path.insert(0, os.path.abspath(".."))
 
 
-extensions = ["sphinx.ext.autodoc"]
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",  # Optional, for parsing Google-style docstrings
+]
+
+
+# Include both class and module level docstrings
+autodoc_default_options = {
+    "members": True,
+    "undoc-members": True,
+    "show-inheritance": True,
+}
+
 source_suffix = ".rst"
 
 # The master toctree document.
