@@ -36,8 +36,8 @@ jobs:
       - name: Build PDF documentation
         run: |
           sphinx-build -b latex docs docs/latex
-          cd docs/_build/latex && latexmk -pdf -interaction=nonstopmode -halt-on-error ts-diffugen.tex
-          cp ts-diffugen.pdf  ../../TS-DiffuGen_Documentation.pdf
+          cd docs/latex && latexmk -pdf -interaction=nonstopmode -halt-on-error ts-diffugen.tex
+          cp ts-diffugen.pdf  ../TS-DiffuGen_Documentation.pdf
 
       - name: Commit changes
         run: |

@@ -7,8 +7,7 @@ __pycache__/
 
 
 # Temporarly remove test yml file
-tests.yml
-
+.github/workflows/tests.yml
 
 
 # Ignore all __pycache__ folders in the entire project
