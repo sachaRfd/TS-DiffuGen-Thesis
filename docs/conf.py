@@ -4,7 +4,7 @@ import os
 
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("../.."))
-sys.path.insert(0, os.path.abspath("../apollo"))
+sys.path.insert(0, os.path.abspath("../src"))
 
 
 extensions = ["sphinx.ext.autodoc"]
@@ -21,11 +21,6 @@ version = "2023"
 release = "2023"
 
 
-# General configuration
-extensions = [
-    "sphinx.ext.autodoc",
-]
-
 source_suffix = ".rst"
 exclude_patterns = ["_build"]
 
@@ -33,9 +28,6 @@ exclude_patterns = ["_build"]
 # Options for LaTeX output
 latex_elements = {"extraclassoptions": "openany,oneside"}
 
-# latex_documents = [
-#     (master_doc, ".tex", "Apollo Documentation", "Apollo", "manual"),
-# ]
 
 # Options for manual page output
 man_pages = [
