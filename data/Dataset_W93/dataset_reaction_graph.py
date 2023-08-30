@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 import os
 import numpy as np
 import torch
@@ -6,22 +8,14 @@ from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 
 """ 
-# noqa
 
-Script to read the samples and create fully connected graphs
-which capture the whole reaction information 
-    - Reactant graph and coordinates
-    - Product graph
+This script performs loads the .XYZ samples and then finds out 
+the bonds present in the reactant and product. This can then
+be used as edge features in the diffusion process.
 
-    
 
-Node Feature includes: 
-- OHE of atom, XYZ coordinates of reactant and XYZ Coordinates of TS
-
-Edge Feature:
-- Fully connected graph with bond type in reactant and product as edge features
-
-"""
+This file is tested.   
+"""  # noqa
 
 
 class W93_TS_coords_and_reacion_graph(Dataset):
@@ -79,42 +73,6 @@ class W93_TS_coords_and_reacion_graph(Dataset):
         # integrate the bond information as edge features and return them
         self.setup_edge_attributes()
 
-        # # Run the Setup:
-        # self.count_data()
-
-        # # Append the reaction data to tbe data-variale
-        # for reaction_number in range(self.count):
-        #     self.extract_data(reaction_number)
-
-        # # Count the atoms:
-        # self.atom_count()
-
-        # # Print the atom count:
-        # print(
-        #     f"\nThe dataset includes {self.count} reactions and the following atom count:\n"  # noqa
-        # )
-        # for atom, count in self.atom_dict.items():
-        #     print(f"\t{atom}: {count}")
-        # print()
-
-        # # One Hot Encode the atoms:
-        # self.one_hot_encode()
-
-        # # Assert that the shapes are correct:
-        # assert (
-        #     self.reactant.shape
-        #     == self.product.shape
-        #     == self.transition_states.shape  # noqa
-        # )  # noqa
-
-        # print("Reading XYZ Files")
-        # self.create_data_array()
-
-        # # integrate the bond information as edge features and return them
-        # self.setup_edge_attributes()
-
-        # print("\nFinished creating the dataset. ")
-
     def count_data(self):
         """
         Counts the number of reactions in the dataset.
@@ -136,9 +94,9 @@ class W93_TS_coords_and_reacion_graph(Dataset):
         return data
 
     def extract_data(self, reaction_number):
-        """# noqa
-        Extracts reactant, product, and transition state information from specified reaction.
         """
+        Extracts reactant, product, and transition state information from specified reaction.
+        """  # noqa
         # Get the Full path:
         path = os.path.join(self.directory, f"Reaction_{reaction_number}")
         assert os.path.exists(path)  # Assert the path Exists
@@ -162,45 +120,6 @@ class W93_TS_coords_and_reacion_graph(Dataset):
                 # Extract transition state matrix
                 ts_matrix = self.read_xyz_file(os.path.join(path, file))
                 self.transition_states.append(ts_matrix)
-
-    # def extract_data(self, reaction_number):
-    #     # Get the Full path:
-    #     path = os.path.join(self.directory, f"Reaction_{reaction_number}")
-    #     assert os.path.exists(path)  # Assert the path Exists
-
-    #     # Check that in the path there are the three files:
-    #     assert (
-    #         len(os.listdir(path)) == 4
-    #     ), "The folder is missing files."  # 4 FIles as we have the reactant images also in the directory   # noqa
-
-    #     # Now we can extract the Reactant, Product, TS info:
-    #     for file in os.listdir(path):  #
-    #         if file.startswith("Reactant"):
-    #             # Append to Reactant Matrix:
-    #             reactant_matrix = []
-    #             with open(os.path.join(path, file), "r") as read_file:
-    #                 lines = read_file.readlines()
-    #                 for line in lines[2:]:
-    #                     reactant_matrix.append(line.split())
-    #             self.reactant.append(reactant_matrix)
-
-    #         elif file.startswith("Product"):
-    #             # Append to Reactant Matrix:
-    #             product_matrix = []
-    #             with open(os.path.join(path, file), "r") as read_file:
-    #                 lines = read_file.readlines()
-    #                 for line in lines[2:]:
-    #                     product_matrix.append(line.split())
-    #             self.product.append(product_matrix)
-
-    #         elif file.startswith("TS"):
-    #             # Append to Reactant Matrix:
-    #             ts_matrix = []
-    #             with open(os.path.join(path, file), "r") as read_file:
-    #                 lines = read_file.readlines()
-    #                 for line in lines[2:]:
-    #                     ts_matrix.append(line.split())
-    #             self.transition_states.append(ts_matrix)
 
     def atom_count(self):
         """
@@ -238,7 +157,7 @@ class W93_TS_coords_and_reacion_graph(Dataset):
         return data
 
     def pad_data(self, data, max_length):
-        """]
+        """
         Pads molecule so that all have the same size
             and can be fed through batch_loader
         """
@@ -249,9 +168,9 @@ class W93_TS_coords_and_reacion_graph(Dataset):
         return torch.tensor(data)
 
     def one_hot_encode(self):
-        """# noqa
-        Performs one-hot encoding of atom types and prepares other data-processing.
         """
+        Performs one-hot encoding of atom types and prepares other data-processing.
+        """  # noqa
         num_of_atoms = len(self.atom_dict)
 
         # Generate OHE:
@@ -299,9 +218,9 @@ class W93_TS_coords_and_reacion_graph(Dataset):
         )
 
     def replace_atom_types_with_ohe_vectors(self, molecule_list):
-        """# noqa
-        Replaces atom types in molecule data with their one-hot encoded vectors.
         """
+        Replaces atom types in molecule data with their one-hot encoded vectors.
+        """  # noqa
         for mol in molecule_list:
             for atom in mol:
                 atom_type = atom[0]  # Get the atom type
@@ -361,9 +280,9 @@ class W93_TS_coords_and_reacion_graph(Dataset):
         )  # Make it return none if it comes upon the masked atoms
 
     def create_data_array(self):
-        """# noqa
-        Creates data arrays.
         """
+        Creates data arrays.
+        """  # noqa
         # This is to just return data as simple matrix and not graph
         for index in range(self.count):
             # Only take the last 3 parts of the product and transition states as they all contain the OHE# noqa
@@ -424,7 +343,7 @@ _edges_dict = {}
 
 
 def get_adj_matrix_no_batch(n_nodes):
-    """# noqa
+    """
     Get the adjacency matrix for a fully connected graph with the specified number of nodes.
 
     This function returns the adjacency matrix as edge indices (rows and columns) for a graph
@@ -438,7 +357,7 @@ def get_adj_matrix_no_batch(n_nodes):
     Returns:
         list of torch.LongTensor: A list containing two LongTensors representing the rows
                                   and columns of the edge indices of the adjacency matrix.
-    """
+    """  # noqa
     if n_nodes in _edges_dict:
         # get edges for a single sample
         rows, cols = [], []
@@ -458,7 +377,7 @@ def get_adj_matrix_no_batch(n_nodes):
 
 # Extra functions for now which let us get the bond information out from reactant/product coordinates# noqa
 def bond_to_edge(h, edge_index):
-    """# noqa
+    """
     Generate bond information between atoms in a reactant and product configuration.
 
     This function takes atom information and edge indices to create bond information
@@ -486,7 +405,7 @@ def bond_to_edge(h, edge_index):
           predefined bond lengths for various atom combinations.
         - Bond types are determined by comparing distances between atoms with predefined bond lengths.
         - The function is currently hardcoded for hydrogen atoms and assumes no context.
-    """
+    """  # noqa
     atom_1, atom_2 = edge_index
     atom_encodings = h[:, :4]
 
@@ -522,7 +441,7 @@ def bond_to_edge(h, edge_index):
 
 # Get Bond Type function
 def get_bond_type(atom_1_OHE, atom_2_OHE, distances):
-    """# noqa
+    """
     This function takes two one-hot encoded representations of atoms (atom_1_OHE and atom_2_OHE)
     and a list of distances between atom pairs. It calculates the bond types between these atoms
     based on their types and the provided distances.
@@ -536,7 +455,7 @@ def get_bond_type(atom_1_OHE, atom_2_OHE, distances):
         torch.Tensor: A tensor containing the bond types between the atom pairs.
                          Each element in the tensor represents a bond type: 1 for a bond present,
                          and 0 for no bond present.
-    """
+    """  # noqa
     # Create tensor the same size of distnace:
     bond_list = []
 
@@ -609,13 +528,6 @@ def get_bond_type(atom_1_OHE, atom_2_OHE, distances):
 
 
 if __name__ == "__main__":
-    # data = pd.read_csv(
-    #     "data/Dataset_W93/data/w93_dataset/wb97xd3.csv", index_col=0
-    # )  # noqa
-
-    # reactant = data.iloc[1].rsmi
-    # print(reactant)
-
     dataset = W93_TS_coords_and_reacion_graph()
 
     batch_size = 64

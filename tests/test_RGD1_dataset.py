@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 from data.Dataset_RGD1.RGD1_dataset_class import RGD1_TS
 from src.EGNN.utils import assert_mean_zero_with_mask
 

@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 """# noqa
 Script for EGNN denoising model which only contains reactant coordinates and graph information about the product: 
 --------------------------------

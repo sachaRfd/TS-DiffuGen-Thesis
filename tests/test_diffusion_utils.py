@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 from src.Diffusion.utils import (
     assert_mean_zero,
     sample_center_gravity_zero_gaussian_with_mask,

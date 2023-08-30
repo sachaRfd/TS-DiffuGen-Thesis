@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 """
 This is the script to evaluate our diffusion model using python Lightning
 -------------------------------------------------------------------------

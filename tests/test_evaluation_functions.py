@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 import numpy as np
 from src.evaluate_samples import (
     get_paths,

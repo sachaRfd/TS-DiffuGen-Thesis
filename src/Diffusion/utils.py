@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 import torch
 import numpy as np
 from src.EGNN.utils import remove_mean_with_mask

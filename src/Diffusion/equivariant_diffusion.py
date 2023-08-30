@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 """
 
 Script for Equivariant diffusion model:

@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 import numpy as np
 import torch
 from torch_geometric.data import Dataset
@@ -6,17 +8,24 @@ from sklearn.model_selection import train_test_split
 from data.Dataset_TX1.TX1_dataloader import Dataloader as TX1_Loader
 
 
-""" # noqa
+"""
 
-Script containing TX1 Dataset class:
+
+This script contains the TX1 pytorch dataset class. 
+We wanted it to inherit from the W93 dataset class, however, as the dataset files
+are storred in a different format it requires to be loaded through a dataloader. 
+Optimisations could be done but not that interesting.
+
 - Takes a little while longer because have to iterate over the whole TX1_Loader to 
 set it up in correct way.
 
 
+When this file is called, the TX1 dataset is instanciated and the different sizes of 
+each dataset split is returned.
+
 Not really testable unless a .h5 file containing a small amount of samples is used.
 I did not want to overwelm the Repo with that. 
-
-"""
+"""  # noqa
 
 
 class TX1_dataset(Dataset):
@@ -147,8 +156,3 @@ if __name__ == "__main__":
     train_dataloader = DataLoader(
         dataset=test_dataset, batch_size=64, shuffle=False
     )  # noqa
-
-    # print(dataset[2][0].shape, dataset[2][1].shape)
-    # print(next(iter(dataloader)))
-
-    # print(dataset[200])

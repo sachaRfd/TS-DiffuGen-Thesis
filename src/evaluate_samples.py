@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 import os
 from rdkit import Chem
 from rdkit.Chem import rdMolAlign as MA

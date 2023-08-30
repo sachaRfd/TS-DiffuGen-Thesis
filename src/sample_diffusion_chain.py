@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 """"
 This script it to create samples including their intermediate steps for visualisation as a GIF:   # noqa
 ----------------------------------------------------------------------------------------------

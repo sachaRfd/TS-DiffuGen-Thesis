@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 """    # noqa
 Script for Equivariant Graph Neural Networks using coordinates from reactant but graph information from the product:
 ---------------------------------------------

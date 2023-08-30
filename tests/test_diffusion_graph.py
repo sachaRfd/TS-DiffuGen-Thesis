@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 from src.Diffusion.equivariant_diffusion import (
     get_node_features,
     DiffusionModel_graph,

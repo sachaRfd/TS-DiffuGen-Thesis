@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 import h5py
 import numpy as np
 import os
@@ -5,17 +7,31 @@ import pandas as pd
 from tqdm import tqdm
 
 """ # noqa
-Adapted from the following repository: https://zenodo.org/record/7618731
+
+Some parts of the main function were adapted from the following repository: 
+https://zenodo.org/record/7618731
 
 
-Script to iterate over the RGD1 Dataset 
+This script is used to iterate over the RGD1 Dataset and:
+- main Function: Creates the .XYZ file required for this project
+- Other functions are not important in this context.
 
-- Download the RGD1_CHNO.h5 file and place it in the same directory as this one. 
-- Then run following script to create the .XYZ file
+This script was not thoroughly tested due to the need of a .h5 file.
 """
 
 
 def save_xyz_file(path, atoms, coordinates):
+    """
+    Save XYZ file with atomic elements and corresponding coordinates.
+
+    Parameters:
+        file_path (str): Path to the output XYZ file.
+        elements (list): List of atomic symbols.
+        coordinates (numpy.ndarray): Array of atomic coordinates.
+
+    Returns:
+        None
+    """
     with open(path, "w") as f:
         f.write(f"{len(atoms)}\n\n")
         for atom, coord in zip(atoms, coordinates):
@@ -24,8 +40,15 @@ def save_xyz_file(path, atoms, coordinates):
 
 def main():
     """
-    Main Function to save the samples in required format
-    """
+    Main Function to save reaction geometries in required XYZ format.
+
+    This function reads a dataset containing reaction geometries from an HDF5 file,
+    parses the elements and geometries of reactants, products, and transition states,
+    and saves them as XYZ files.
+
+    Returns:
+        None
+    """  # noqa
     dir = "data/Dataset_RGD1/RGD1_CHNO.h5"
     assert os.path.exists(
         dir
@@ -39,11 +62,6 @@ def main():
     count = 0
     for Rind, Rxn in hf.items():
         print("Paring Reaction {}".format(Rind))
-
-        # Parse smiles
-        # Rsmiles, Psmiles = str(np.array(Rxn.get("Rsmiles"))), str(
-        #     np.array(Rxn.get("Psmiles"))
-        # )
 
         # Parse elements
         elements = [num2element[Ei] for Ei in np.array(Rxn.get("elements"))]
@@ -69,14 +87,19 @@ def main():
 
         print(f"Geometries saved for Reaction {count}")
         count += 1
-        exit()
 
 
 def checking_duplicates():
-    """# noqa
-    Function to check for duplicate reactants and products based on SMILES strings,
-    and only save the first one to file.
     """
+    Check for duplicate reactants and products based on SMILES strings.
+
+    This function reads reaction data from an HDF5 file, parses the SMILES strings
+    of reactants and products, and identifies duplicate reactions. It keeps track
+    of duplicate reaction information and their counts.
+
+    Returns:
+        None
+    """  # noqa
     # Read the CSV file and open the HDF5 file
     # csv_file = pd.read_csv("data/Dataset_RGD1/DFT_reaction_info.csv")
     hf = h5py.File("data/Dataset_RGD1/RGD1_CHNO.h5", "r")
@@ -137,14 +160,20 @@ def checking_duplicates():
 
 
 def save_reactions_with_multiple_ts(save_even_single=False):
-    """# noqa
-
-    - Function that finds reactions with multiple TS conformers (By looking at identical reaction smiles)
-    - Then saves each reaction inside the directory:
-        data/RDD1_Dataset/data/Multiple_TS/Reaction_{reaction_smiles}
-    - Inside that directory, it saves the true_reactant, true_product, TS_1, TS_X_{activation_energy}, TS_x_{Activation_energy}
-
     """
+    Save reactions with multiple TS conformers to separate directories.
+
+    This function reads reaction data from an HDF5 file along with activation energy
+    data from a CSV file. It identifies reactions with multiple transition state
+    (TS) conformers based on identical reaction SMILES strings. It then organizes
+    and saves these reactions and their geometries into separate directories.
+
+    Parameters:
+        save_even_single (bool, optional): Save reactions with only one TS conformer as well. (default: False)
+
+    Returns:
+        None
+    """  # noqa
     # Read the CSV file and open the HDF5 file
     csv_file = pd.read_csv("data/Dataset_RGD1/DFT_reaction_info.csv")
     hf = h5py.File("data/Dataset_RGD1/RGD1_CHNO.h5", "r")
@@ -260,5 +289,7 @@ def save_reactions_with_multiple_ts(save_even_single=False):
 if __name__ == "__main__":
     print("Running scripts")
     main()
-    checking_duplicates()
+
+    # These are used in Other Project
+    # checking_duplicates()
     # save_reactions_with_multiple_ts(save_even_single=True)

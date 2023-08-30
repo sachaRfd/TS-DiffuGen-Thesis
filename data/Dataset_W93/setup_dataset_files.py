@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 import numpy as np
 import pandas as pd
 import os
@@ -8,10 +10,34 @@ from rdkit import Chem
 from rdkit.Chem import Draw
 
 
+"""
+
+This script contrains the functions to setup the W93 dataset.
+
+
+When this script is run, it sets up the W93 dataset in the 
+appropriate folders for downstream use.
+
+This file is testsed.
+
+"""  # noqa
+
+
 def extract_geometry(logs):
     """
-    Extract geometry from DFT .log files
-    """
+    Extract geometry from DFT .log files.
+
+    This function extracts atomic symbols and coordinates from a list of lines
+    obtained from a DFT .log file. It searches for the section indicating the
+    standard nuclear orientation and extracts the atom labels and corresponding
+    coordinates in the next line.
+
+    Parameters:
+        logs (list): List of lines from the DFT .log file.
+
+    Returns:
+        tuple: A tuple containing a list of atomic symbols and a numpy array of atomic coordinates.
+    """  # noqa
     for index in reversed(range(len(logs))):
         line = logs[index]
         if "Standard Nuclear Orientation" in line:
@@ -23,14 +49,24 @@ def extract_geometry(logs):
                     coordinates = [float(geo) for geo in data[2:]]
                     atoms.append(atom)
                     coords.append(coordinates)
-                else:
+                else:  # End of molecule otherwise
                     return atoms, np.array(coords)
 
 
 def create_pdb_from_file_path(path_to_raw_log, path_to_final):
     """
-    Write .XYZ file from a .log DFT file
-    """
+    Create a .XYZ file from a .log DFT file containing atomic coordinates.
+
+    This function reads a DFT .log file, extracts atomic symbols and coordinates,
+    and writes them into a .PDB file format.
+
+    Parameters:
+        path_to_raw_log (str): Path to the input DFT .log file.
+        path_to_final (str): Path to the output .PDB file to be created.
+
+    Returns:
+        None
+    """  # noqa
     if not os.path.exists(path_to_raw_log):
         print("Path to Raw Log is incorrect. Please provide a valid path.")
         exit()
@@ -49,8 +85,20 @@ def create_pdb_from_file_path(path_to_raw_log, path_to_final):
 
 def process_reactions(dataframe, directory):
     """
-    Function to Process .log files and write them in .xyz format
-    """
+    Process reaction data from .log files and create various output files.
+
+    This function processes reaction data stored in .log files and organizes the
+    data into clean geometry files in .xyz format. It also generates images of the
+    reactants and products and saves them, along with the geometry files, for each
+    reaction.
+
+    Parameters:
+        dataframe (pd.DataFrame): DataFrame containing reaction data, including reactant and product SMILES.
+        directory (str): Path to the main directory containing the raw log files.
+
+    Returns:
+        None
+    """  # noqa
     TS_Directory = directory + "/TS/wb97xd3/"
 
     # Assert that the above directory exists

@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 import h5py
 import numpy as np
 import torch
@@ -6,12 +8,17 @@ import torch
 """
 # noqa
 
-Script to read the TX1 Dataset .h5 file.
+This dataloader class was adapted from the following script: 
+https://gitlab.com/matschreiner/Transition1x/-/blob/main/transition1x/dataloader.py?ref_type=heads
 
-Slight changes from initial script: https://gitlab.com/matschreiner/Transition1x/-/blob/main/transition1x/dataloader.py?ref_type=heads
+
+This script is used to read the TX1 Dataset .h5 file, and load the samples into a 
+dataloader. This dataloader is then used downstream with a pytorch dataset class.
 
 
 Not really testable without adding a .h5 file to Repo. (Which could overwhelm the project)
+
+When this file is called the dataloader is instanciated and the length of the dataset is returned.
 
 """
 
@@ -33,6 +40,18 @@ ohe_to_atomic_number = {
 
 
 def get_molecular_reference_energy(atomic_numbers):
+    """
+    Calculate the molecular reference energy based on atomic numbers.
+
+    This function takes a list of atomic numbers and calculates the molecular
+    reference energy by summing up the individual reference energies of the atoms.
+
+    Parameters:
+        atomic_numbers (list): List of atomic numbers of the atoms in the molecule.
+
+    Returns:
+        float: The calculated molecular reference energy.
+    """  # noqa
     molecular_reference_energy = 0
     for atomic_number in atomic_numbers:
         molecular_reference_energy += REFERENCE_ENERGIES[atomic_number]
@@ -41,8 +60,22 @@ def get_molecular_reference_energy(atomic_numbers):
 
 
 def generator(formula, rxn, grp):
-    """Iterates through a h5 group"""
+    """# noqa
+    Iterate through an HDF5 group, processing energy and force data.
 
+    This generator function iterates through an HDF5 group containing energy,
+    force, atomic numbers, and position data for a molecular system. It processes
+    this data to calculate various properties and returns dictionaries with the
+    calculated information for each step.
+
+    Parameters:
+        formula (str): Chemical formula of the molecule.
+        rxn (str): Reaction identifier or description.
+        grp (h5py.Group): The HDF5 group containing the data.
+
+    Returns:
+        dict: A dictionary containing calculated properties for each step.
+    """
     energies = grp["wB97x_6-31G(d).energy"]
     forces = grp["wB97x_6-31G(d).forces"]
     atomic_numbers = list(grp["atomic_numbers"])
@@ -65,13 +98,27 @@ def generator(formula, rxn, grp):
 
 
 class Dataloader:
-    """# noqa
-    Can iterate through h5 data set for paper ####
-
-    hdf5_file: path to data
-    only_final: if True, the iterator will only loop through reactant, product and transition
-    state instead of all configurations for each reaction and return them in dictionaries.
     """
+    Iterates through an HDF5 dataset, providing access to reaction data.
+
+    This class allows iteration through an HDF5 dataset containing reaction data.
+    It provides the ability to loop through different configurations for each
+    reaction and return the data in dictionaries. The class can also be configured
+    to iterate only through reactants, products, and transition states.
+
+    Parameters:
+        hdf5_file (str): Path to the HDF5 file containing the dataset.
+        datasplit (str, optional): Specifies the data split to iterate through (e.g., "data", "train", "val", "test"). (default: "data")
+        only_final (bool, optional): If True, the iterator will only loop through reactants, products, and transition states. (default: False)
+
+    Attributes:
+        hdf5_file (str): Path to the HDF5 file containing the dataset.
+        only_final (bool): Flag indicating whether to iterate only through reactants, products, and transition states.
+        datasplit (str): Specifies the data split being iterated through.
+
+    Returns:
+        dict: A dictionary containing data for each configuration.
+    """  # noqa
 
     def __init__(self, hdf5_file, datasplit="data", only_final=False):
         self.hdf5_file = hdf5_file
@@ -87,6 +134,9 @@ class Dataloader:
             ], "datasplit must be one of 'all', 'train', 'val' or 'test'"
 
     def __iter__(self):
+        """
+        Iterate through the HDF5 dataset and yield configuration data.
+        """
         with h5py.File(self.hdf5_file, "r") as f:
             split = f[self.datasplit]
 
@@ -164,19 +214,14 @@ if __name__ == "__main__":
 
         # Concatenate the padding to the original molecule tensor:
         padded_mol = torch.concatenate((mol, padding), dim=0)
-        # print(padded_mol)
-        # exit()
 
         # Now create the node mask:
         node_mask = torch.tensor(
             [1.0] * mol[0].shape[0] + [0.0] * (max_length - mol.shape[0])
         )
-        # print(node_mask)
 
         # Append them to dataset:
         test_node_masks.append(node_mask)
         test_set.append(padded_mol)
 
     print(f"Length of the test set is {len(test_set)}")
-    # print(test_set)
-    # print(test_node_masks)

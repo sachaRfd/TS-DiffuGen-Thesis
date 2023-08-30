@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 import argparse
 import yaml
 import os
@@ -22,9 +24,12 @@ def main(args, pytest_time=False):
         include_context=args.include_context,
         no_product=args.remove_product,
     )
-
-    # Setup the device that is available:
-    device = setup_device()
+    # At pytest time: Device should be the CPU
+    if pytest_time:
+        device = "cpu"
+    else:
+        # Setup the device that is available:
+        device = setup_device()
 
     # Get the paths:
     model_name = args.model_name

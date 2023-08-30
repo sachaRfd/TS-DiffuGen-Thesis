@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 from src.EGNN.dynamics import EGNN_dynamics_QM9
 import torch
 import pytest

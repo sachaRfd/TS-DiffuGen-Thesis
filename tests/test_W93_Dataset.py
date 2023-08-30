@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 from data.Dataset_W93.dataset_class import W93_TS
 from data.Dataset_W93.setup_dataset_files import process_reactions
 import pandas as pd

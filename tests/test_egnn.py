@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 from src.EGNN.egnn import (
     coord2diff,
     unsorted_segment_sum,

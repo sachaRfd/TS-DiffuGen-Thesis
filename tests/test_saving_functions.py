@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 from src.Diffusion.saving_sampling_functions import write_xyz_file, return_xyz  # noqa
 import torch
 import os

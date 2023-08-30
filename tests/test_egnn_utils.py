@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 from src.EGNN.utils import (
     setup_device,
     sum_except_batch,

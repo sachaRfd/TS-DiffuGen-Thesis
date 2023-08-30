@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 import os
 import numpy as np
 import torch
@@ -8,6 +10,19 @@ from sklearn.model_selection import train_test_split
 
 
 """
+
+This python file contains the pytorch dataset class for
+the RGD1 Dataset.
+
+Please note that due to the size of the dataset (>170,000 samples)
+it does take some time to load the samples into the dataset class.
+However once setup (~ 40 seconds) it can easily be loaded into a
+dataloader.
+
+When this file is called:
+- It instanciates the dataset.
+- Loads it into a dataloader.
+- Prints the first atom of the first molecule to screen.
 
 """
 
@@ -57,9 +72,9 @@ class RGD1_TS(Dataset):
         print("Finished creating the dataset.")
 
     def load_data(self):
-        """# noqa
-        Loads the dataset by extracting data from reaction files and performing preprocessing steps.
         """
+        Loads the dataset by extracting data from reaction files and performing preprocessing steps.
+        """  # noqa
         self.count_data()
         for reaction_number in range(self.count):
             self.extract_data(reaction_number)
@@ -101,9 +116,9 @@ class RGD1_TS(Dataset):
         return data
 
     def extract_data(self, reaction_number):
-        """# noqa
-        Extracts reactant, product, and transition state information from specified reaction.
         """
+        Extracts reactant, product, and transition state information from specified reaction.
+        """  # noqa
         # Get the Full path:
         path = os.path.join(self.directory, f"Reaction_{reaction_number}")
         assert os.path.exists(path)  # Assert the path Exists
@@ -201,7 +216,7 @@ class RGD1_TS(Dataset):
         return data
 
     def pad_data(self, data, max_length):
-        """]
+        """
         Pads molecule so that all have the same size
             and can be fed through batch_loader
         """
@@ -212,9 +227,9 @@ class RGD1_TS(Dataset):
         return torch.tensor(data)
 
     def one_hot_encode(self):
-        """# noqa
-        Performs one-hot encoding of atom types and prepares other data-processing.
         """
+        Performs one-hot encoding of atom types and prepares other data-processing.
+        """  # noqa
         num_of_atoms = len(self.atom_dict)
 
         # Generate OHE:
@@ -262,9 +277,9 @@ class RGD1_TS(Dataset):
         )
 
     def replace_atom_types_with_ohe_vectors(self, molecule_list):
-        """# noqa
-        Replaces atom types in molecule data with their one-hot encoded vectors.
         """
+        Replaces atom types in molecule data with their one-hot encoded vectors.
+        """  # noqa
         for mol in molecule_list:
             for atom in mol:
                 atom_type = atom[0]  # Get the atom type
@@ -324,9 +339,9 @@ class RGD1_TS(Dataset):
         )  # Make it return none if it comes upon the masked atoms
 
     def create_data_array(self):
-        """# noqa
-        Creates data arrays with context information based on the selected context or without context.
         """
+        Creates data arrays with context information based on the selected context or without context.
+        """  # noqa
         print("Not including Context information")
         for index in range(self.count):
             x = torch.cat(

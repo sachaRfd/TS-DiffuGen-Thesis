@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 import os
 import numpy as np
 import torch
@@ -8,31 +10,25 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-
-""" # noqa
-How are we making the dataset class: 
-
-1. Check that the directory exists
-2. Count how many samples are in the dataset
-3. Then we extract the atom and 3D coordinates from each reaction
-    - We do this seperately for reactants / products / TS as we may want to use them seperately in later experiements
-4. Then we get the counts for each atoms in our reactions
-5. Then we One-Hot-Encode the atom type into the molecules
-    - This also pads each molecules with atoms corresponding to none - This is so that each later graph has the same amount of nodes and is able to be loaded into a dataloder
-6. Then we create fully connected graphs
-    - Even if some of the nodes are just padded 0s
-    - 
-Notes: 
-    - We can potentially integrate bond lengths in the edges or smthg. 
-        - Code-base is already present for this: https://github.com/igashov/DiffLinker/blob/main/src/const.py
-
-        
-
-Another step will be to add functionality that does not include the hydrogens. 
-- Remove it straight from the reading the XYZ files.
-
-
 """
+
+This file contains the dataset class for the W93 dataset.
+This class does not implement reaction graphs. If you require this, 
+please use the other dataset class: dataset_reaction_graph.
+
+Description of the dataset class:
+
+The class offers the following key features:
+
+- Loading and preprocessing of reaction data from .xyz files.
+- Support for removing hydrogens from the data.
+- Option to create fully connected reaction graphs.
+- Inclusion of context information such as nuclear charges, van der Waals radii, or activation energy.
+- Analysis and visualization of molecule size distribution in the dataset.
+
+Note: The actual class implementation contains many details and methods related to loading, preprocessing, and manipulating the data. The description provided above outlines the overall purpose of the dataset class and its key features.
+
+"""  # noqa
 
 
 class W93_TS(Dataset):
@@ -96,9 +92,9 @@ class W93_TS(Dataset):
         print("Finished creating the dataset.")
 
     def load_data(self):
-        """# noqa
-        Loads the dataset by extracting data from reaction files and performing preprocessing steps.
         """
+        Loads the dataset by extracting data from reaction files and performing preprocessing steps.
+        """  # noqa
         self.count_data()
         for reaction_number in range(self.count):
             self.extract_data(reaction_number)
@@ -145,9 +141,9 @@ class W93_TS(Dataset):
         return data
 
     def extract_data(self, reaction_number):
-        """# noqa
-        Extracts reactant, product, and transition state information from specified reaction.
         """
+        Extracts reactant, product, and transition state information from specified reaction.
+        """  # noqa
         # Get the Full path:
         path = os.path.join(self.directory, f"Reaction_{reaction_number}")
         assert os.path.exists(path)  # Assert the path Exists
@@ -252,7 +248,7 @@ class W93_TS(Dataset):
         return data
 
     def pad_data(self, data, max_length):
-        """]
+        """
         Pads molecule so that all have the same size
             and can be fed through batch_loader
         """
@@ -263,9 +259,9 @@ class W93_TS(Dataset):
         return torch.tensor(data)
 
     def one_hot_encode(self):
-        """# noqa
-        Performs one-hot encoding of atom types and prepares other data-processing.
         """
+        Performs one-hot encoding of atom types and prepares other data-processing.
+        """  # noqa
         num_of_atoms = len(self.atom_dict)
 
         # Generate OHE:
@@ -313,9 +309,9 @@ class W93_TS(Dataset):
         )
 
     def replace_atom_types_with_ohe_vectors(self, molecule_list):
-        """# noqa
-        Replaces atom types in molecule data with their one-hot encoded vectors.
         """
+        Replaces atom types in molecule data with their one-hot encoded vectors.
+        """  # noqa
         for mol in molecule_list:
             for atom in mol:
                 atom_type = atom[0]  # Get the atom type
@@ -399,9 +395,9 @@ class W93_TS(Dataset):
         )  # Make it return none if it comes upon the masked atoms
 
     def create_data_array(self):
-        """# noqa
-        Creates data arrays with context information based on the selected context or without context.
         """
+        Creates data arrays with context information based on the selected context or without context.
+        """  # noqa
         if self.context:
             print(f"Including {self.context} to context")
             for index in range(self.count):

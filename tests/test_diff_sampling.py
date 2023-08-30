@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 from src.lightning_setup import LitDiffusionModel
 import pandas as pd
 from src.Diffusion.equivariant_diffusion import get_node_features

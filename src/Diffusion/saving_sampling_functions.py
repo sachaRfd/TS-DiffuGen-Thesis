@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 """
 This is current code to create XYZ files of the generated transition states
 ------------------------------------------------------------------------------

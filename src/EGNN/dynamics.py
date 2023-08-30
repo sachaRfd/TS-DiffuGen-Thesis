@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 """# noqa
 Script for EGNN denoising model: 
 --------------------------------

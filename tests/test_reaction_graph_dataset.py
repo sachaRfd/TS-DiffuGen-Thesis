@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 from data.Dataset_W93.setup_dataset_files import process_reactions
 from src.EGNN.utils import assert_mean_zero_with_mask
 

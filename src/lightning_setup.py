@@ -1,3 +1,5 @@
+# Sacha Raffaud sachaRfd and acse-sr1022
+
 import os
 import pytorch_lightning
 import pytorch_lightning as pl
