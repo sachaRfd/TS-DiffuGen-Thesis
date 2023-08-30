@@ -23,7 +23,6 @@ jobs:
 
       - name: Setup Directory for Sphinx
         run: |
-          cd TS-DiffuGen
           python setup.py install
 
 
