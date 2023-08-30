@@ -21,6 +21,11 @@ jobs:
         with:
           python-version: 3.9
 
+      - name: Setup Directory for Sphinx
+        run: |
+          cd TS-DiffuGen
+          python setup.py install
+
 
       - name: Install dependencies
         run: |
