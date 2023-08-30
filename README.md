@@ -216,19 +216,11 @@ To set up the RGD1 dataset, follow these steps:
     ```
 
 
-## Setup WandB in Your Environment
+## WandB in Your Environment
 
-The training of diffusion models is enhanced with the integration of Weights and Biases (WandB). This enables real-time visualization of training and validation losses, as well as continuous monitoring of the training process. To set up WandB:
+The training of diffusion models is enhanced with the integration of Weights and Biases (WandB). This enables real-time visualization of training and validation losses, as well as continuous monitoring of the training process. If WandB is not yet setup in your environment, when you train your first diffusion model, you will be asked to input a WandB API key. 
 
-1. Ensure you have a valid WandB API key available.
-2. Place the API key within the `wandb_setup.py` file located in the root directory.
-3. Run the `wandb_setup.py` script.
-
-
-    ```shell
-    python wandb_setup.py
-    ```
-
+If you do not already have an account, you can make one through the following link: [WandB](https://wandb.ai/)
 
 4. With this setup, WandB is configured within your environment, allowing you to proceed with training diffusion models.
 
