@@ -139,7 +139,7 @@ def main(args, pytest_time=False):
             model_path_saved
         ), "The Saved Weights are not present"  # noqa
 
-        # If the weights are present then can create samples directory if not present:if not os.path.exists()
+        # If the weights are present then can create samples directory if not present:  # noqa
         if not os.path.exists(sample_path):
             os.mkdir(sample_path)
 
@@ -204,12 +204,22 @@ def main(args, pytest_time=False):
 
         # No Logger needed during Sampling:
         logger = None
-        # Setup trainer:
-        trainer = pl.Trainer(
-            accelerator="cuda",
-            logger=logger,
-            fast_dev_run=False,
-        )
+
+        if pytest_time:
+            # Cannot use GPU:
+            # Setup trainer with CPU:
+            trainer = pl.Trainer(
+                accelerator="cpu",
+                logger=logger,
+                fast_dev_run=False,
+            )
+        else:
+            # Setup trainer with GPU:
+            trainer = pl.Trainer(
+                accelerator="cuda",
+                logger=logger,
+                fast_dev_run=False,
+            )
         trainer.test(lit_diff_model)
 
     else:
