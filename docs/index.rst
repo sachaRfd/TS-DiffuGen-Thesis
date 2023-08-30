@@ -4,7 +4,7 @@ TS-DiffuGen: Diffusion Model for Reaction Transition State optimisation
 
 
 .. toctree::
-   :maxdepth: 10
+   :maxdepth: 2
    :caption: Source Files
    
    ts_diff
