@@ -147,7 +147,7 @@ def main(args, pytest_time=False):
         # Learning rate scheduler:
         if args.learning_rate_scheduler:
             trainer = pl.Trainer(
-                accelerator="cuda",
+                accelerator=device.type,
                 max_epochs=args.epochs,
                 logger=wandb_logger,
                 callbacks=[lr_monitor],
@@ -158,7 +158,7 @@ def main(args, pytest_time=False):
 
         else:
             trainer = pl.Trainer(
-                accelerator="cuda",
+                accelerator=device.type,
                 max_epochs=args.epochs,
                 logger=wandb_logger,
                 fast_dev_run=False,
@@ -256,7 +256,7 @@ def main(args, pytest_time=False):
         else:
             # Setup trainer with GPU:
             trainer = pl.Trainer(
-                accelerator="cuda",
+                accelerator=device.type,
                 logger=logger,
                 fast_dev_run=False,
             )

@@ -141,7 +141,7 @@ Each Python file and script includes a header at the top, providing information 
 1. Clone the repository
 
 ```shell
-git clone https://github.com/schwallergroup/DiffSach.git
+git clone https://github.com/schwallergroup/TS-DiffuGen.git
 ```
 2. Navigate to the root repository:
 
@@ -149,7 +149,7 @@ git clone https://github.com/schwallergroup/DiffSach.git
 cd TS-DiffuGen
 ```
 
-3. Create the Conda environment:
+3. Create the Conda environment (May take a while !):
 
 ```shell
 conda env create -f environment.yml
@@ -177,13 +177,19 @@ To set up the W93 dataset, follow these steps:
 
 1. Download the compressed Tar file `wb97xd3.tar.gz` from the following link: [W93 Dataset Link](https://zenodo.org/record/3715478)
 2. Place the downloaded file in the `data/Dataset_W93/data/w93_dataset/` directory.
-3. Uncompress the .tar file into the TS directory using the following command: 
-
+3. Create a `TS` directory with the following command: 
+    
      ```shell
-     tar -xvf Dataset_W93/data/w93_dataset/wb97xd3.tar.gz -C Dataset_W93/data/TS/
+    mkdir data/Dataset_W93/data/TS
      ```
 
-4. Run the `setup_dataset_files.py` script to process and organize the dataset using the following command: 
+4. Uncompress the .tar file into the TS directory using the following command: 
+
+     ```shell
+     tar -xvf data/Dataset_W93/data/w93_dataset/wb97xd3.tar.gz -C data/Dataset_W93/data/TS/
+     ```
+
+5. Run the `setup_dataset_files.py` script to process and organize the dataset using the following command (Will take ~ 3 minutes): 
 
     ```
     python data/Dataset_W93/setup_dataset_files.py
@@ -228,8 +234,6 @@ The training of diffusion models is enhanced with the integration of Weights and
 
 
 ## Training a new Diffusion Model:
-
-### Setup WandB in your environment: 
 
 1. Change the parameters in the `configs/train_diffusion.yml` configuration file. 
 2. Run the following command to train a new diffusion model:
