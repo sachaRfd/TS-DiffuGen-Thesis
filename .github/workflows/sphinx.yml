@@ -21,9 +21,20 @@ jobs:
         with:
           python-version: 3.9
 
-      - name: Setup Directory for Sphinx
+      - name: Install Miniconda
         run: |
+          curl -LO https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+          bash Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda
+          source $HOME/miniconda/etc/profile.d/conda.sh
+          conda activate base
+
+      - name: Create Environment and setup
+        run: |
+          conda env create -f environment.yml
+          conda activate tsdiff
           python setup.py install
+
+
 
 
       - name: Install dependencies
