@@ -1,0 +1,54 @@
+name: sphinx-pdf
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  sphinx:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install flake8
+
+
+      - name: Install texlive
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra latexmk
+
+      - name: Build PDF documentation
+        run: |
+          sphinx-build -b latex docs docs/latex
+          cd docs/_build/latex && latexmk -pdf -interaction=nonstopmode -halt-on-error ts-diffugen.tex
+          cp ts-diffugen.pdf  ../../TS-DiffuGen_Documentation.pdf
+
+      - name: Commit changes
+        run: |
+          git add docs/TS-DiffuGen_Documentation.pdf
+          git config --global user.email "github@linux"
+          git config --global user.name "githublinux"
+          git commit -m "Update PDF through workflow"
+          git remote -v
+
+      - name: Push changes
+        uses: ad-m/github-push-action@v0.6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
