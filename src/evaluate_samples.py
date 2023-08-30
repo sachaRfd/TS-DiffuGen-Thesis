@@ -19,30 +19,14 @@ This file is tested.
 
 def get_paths(sample_path):
     """
-    Calculate the energy based on temperature and pressure.
+    Load molecule files from a sample path and organize them into true and generated samples.
 
-    This function takes temperature and pressure as input and calculates the energy
-    using a simple formula. The formula used is:
-
-    .. math::
-       E = k \\cdot T + P
-
-    Parameters:
-    temperature (float): The temperature in Kelvin.
-    pressure (float): The pressure in atmospheres.
+    Args:
+        sample_path (str): Path to the sample directory containing molecule files.
 
     Returns:
-    float: The calculated energy value.
+        tuple: Two lists containing true and generated sample file paths.
     """  # noqa
-    # """
-    # Load molecule files from a sample path and organize them into true and generated samples. # noqa
-
-    # Args:
-    #     sample_path (str): Path to the sample directory containing molecule files.    # noqa
-
-    # Returns:
-    #     tuple: Two lists containing true and generated sample file paths.
-    # """  # noqa
 
     # Check that the path exists:
     assert os.path.exists(sample_path)
