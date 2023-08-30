@@ -21,21 +21,17 @@ jobs:
         with:
           python-version: 3.9
 
-      - name: Install Miniconda
+      - name: for Sphinx
         run: |
-          curl -LO https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-          bash Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda
-          source $HOME/miniconda/etc/profile.d/conda.sh
-          conda activate base
+          python setup.py install
 
-      - name: Create Environment and setup
-        run: |
-          conda env create -f environment.yml
 
       - name: Install dependencies
         run: |
           pip install --upgrade pip
           pip install sphinx sphinx_rtd_theme
+          pip install rdkit
+
 
       - name: Install texlive
         run: |
@@ -44,11 +40,9 @@ jobs:
 
       - name: Build PDF documentation
         run: |
-          source $HOME/miniconda/etc/profile.d/conda.sh
-          conda run -n tsdiff sphinx-build -b latex docs docs/latex
-          cd docs/latex && conda run -n tsdiff latexmk -pdf -interaction=nonstopmode -halt-on-error ts-diffugen.tex
-          cp ts-diffugen.pdf ../TS-DiffuGen_Documentation.pdf
-
+          sphinx-build -b latex docs docs/latex
+          cd docs/latex && latexmk -pdf -interaction=nonstopmode -halt-on-error ts-diffugen.tex
+          cp ts-diffugen.pdf  ../TS-DiffuGen_Documentation.pdf
 
       - name: Commit changes
         run: |
