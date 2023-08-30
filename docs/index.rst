@@ -1,6 +1,13 @@
 TS-DiffuGen: Diffusion Model for Reaction Transition State optimisation
 =======================================================================
 
+.. automodule:: src.evaluate_samples
+   :members: 
+   :inherited-members:
+   :undoc-members:
+   :show-inheritance:
+   :noindex:
+
 
 
 .. toctree::
