@@ -31,8 +31,7 @@ jobs:
       - name: Create Environment and setup
         run: |
           conda env create -f environment.yml
-          conda activate tsdiff
-          python setup.py install
+          conda run -n tsdiff python setup.py install
 
 
 
