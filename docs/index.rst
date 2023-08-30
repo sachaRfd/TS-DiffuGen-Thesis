@@ -8,7 +8,8 @@ This is the documentation for the TS-DiffuGen Package.
 
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 10
    :caption: Source Files
-
+   
+   ts_diff
    src/*.py
