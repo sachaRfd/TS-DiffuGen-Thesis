@@ -45,10 +45,10 @@ jobs:
       - name: Build PDF documentation
         run: |
           source $HOME/miniconda/etc/profile.d/conda.sh
-          conda activate tsdiff
-          sphinx-build -b latex docs docs/latex
-          cd docs/latex && latexmk -pdf -interaction=nonstopmode -halt-on-error ts-diffugen.tex
+          conda run -n tsdiff sphinx-build -b latex docs docs/latex
+          cd docs/latex && conda run -n tsdiff latexmk -pdf -interaction=nonstopmode -halt-on-error ts-diffugen.tex
           cp ts-diffugen.pdf ../TS-DiffuGen_Documentation.pdf
+
 
       - name: Commit changes
         run: |
