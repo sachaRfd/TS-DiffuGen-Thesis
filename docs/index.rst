@@ -9,6 +9,10 @@ This is the documentation for the TS-DiffuGen Package.
 
 .. toctree::
    :maxdepth: 2
+   :caption: Contents:
+
+    src/evaluate_samples
+    src/lightning_setup
 
 .. automodule:: src.evaluate_samples
    :members: 
