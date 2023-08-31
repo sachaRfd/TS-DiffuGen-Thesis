@@ -2,52 +2,8 @@ TS-DiffuGen: Diffusion Model for Reaction Transition State Optimization
 =====================================================================
 
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+.. contents:: Table of Contents
 
-Introduction
--------------
-intro
-
-Datasets
---------
-datasets
-setting-up-dataset-files
-simple-w93-dataset-without-graphs
-w93-dataset-with-graphs
-tx1-dataset
-rgd1-dataset
-
-The Equivariant Graph Neural Network
-------------------------------------
-egnn
-dynamics-without-graphs
-dynamics-with-graphs
-utility-functions
-
-The Diffusion Model Backbone
------------------------------
-equivariant-diffusion
-noise-schedule-for-diffusion
-utility-functions-for-diffusion
-
-PyTorch Lightning for Simplicity
--------------------------------
-lightning-setup
-saving-and-writing-functions
-
-Training and Sampling from the Test Set
----------------------------------------
-train-test
-
-Evaluating Samples
-------------------
-evaluate-samples
-
-Supplementary Scripts and Functions
------------------------------------
-supplementary-scripts
 
 Introduction
 ------------
