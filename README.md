@@ -2,8 +2,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
 [![Powered by RDKit](https://img.shields.io/badge/Powered%20by-RDKit-3838ff.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAFVBMVEXc3NwUFP8UPP9kZP+MjP+0tP////9ZXZotAAAAAXRSTlMAQObYZgAAAAFiS0dEBmFmuH0AAAAHdElNRQfmAwsPGi+MyC9RAAAAQElEQVQI12NgQABGQUEBMENISUkRLKBsbGwEEhIyBgJFsICLC0iIUdnExcUZwnANQWfApKCK4doRBsKtQFgKAQC5Ww1JEHSEkAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyMi0wMy0xMVQxNToyNjo0NyswMDowMDzr2J4AAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjItMDMtMTFUMTU6MjY6NDcrMDA6MDBNtmAiAAAAAElFTkSuQmCC)](https://www.rdkit.org/)
-![Tests Status](https://github.com/schwallergroup/DiffSach/actions/workflows/flake8.yml/badge.svg)
+![Flate8 Status](https://github.com/schwallergroup/DiffSach/actions/workflows/flake8.yml/badge.svg)
 ![Tests Status](https://github.com/schwallergroup/DiffSach/actions/workflows/tests.yml/badge.svg)
+![Documentation Status](https://github.com/schwallergroup/DiffSach/actions/workflows/documentation.yml/badge.svg)
+
 
 This repository contains the code for implementing Sacha Raffaud's IRP project titled "Diffusion Models for Optimized Geometry Prediction".
 
@@ -29,22 +31,6 @@ In this project, transition state optimization involves generating accurate 3D r
   </div>
 </div>
 
-
-
-
-<!-- <div style="display: flex; justify-content: center;">
-  <div style="margin-right: 20px;">
-    <img src="visualisations/gifs/sample_5_1x.gif" alt="example gif" width="500">
-  </div>
-  <div>
-    <figure style="margin: 0;">
-      <img src="visualisations/gifs/sample_4_1x.gif" alt="example gif" width="500">
-      <figcaption style="text-align: center;"></figcaption>
-    </figure>
-  </div>
-</div> -->
-
-
 ### Equivariant Graph Neural Networks (EGNN)
 
 EGNNs are graph neural networks (GNN) that maintain equivariance to transformations. This means that the output of the network transforms in the same manner as the input when transformed prior to feeding it into the GNN.
@@ -52,11 +38,12 @@ EGNNs are graph neural networks (GNN) that maintain equivariance to transformati
 <div>
   <img src="visualisations/denoised_example_good.png" alt="Example Denoising image">
 </div>
+
 ### Equivariant Diffusion Models
 
-After establishing a denoising framework, it can be applied iteratively in a diffusion model. In diffusion models, the process involves forward diffusion, where noise is incrementally added to the input sample until it conforms to an isotropic Gaussian distribution. This is followed by learnable backward diffusion, where noise is subtracted to reconstruct the original data. This iterative backward process enables high-quality data generation.
+After establishing a denoising framework, it can be applied iteratively in a diffusion model. In diffusion models, the process involves a forward diffusion, where noise is incrementally added to the input sample until it conforms to an isotropic Gaussian distribution. This is followed by learnable backward diffusion, where noise is subtracted to reconstruct the original data. This iterative backward process enables high-quality data generation and is what we are trying to optimise to allow for accurate TS generation.
 
-For detailed background and results, refer to Sacha's thesis.
+For detailed background and results, please refer to Sacha's thesis.
 
 ## Project Objectives
 
@@ -70,19 +57,19 @@ For detailed background and results, refer to Sacha's thesis.
 
 Three main datasets were employed in this project for comprehensive comparisons: W93, TX1, and RGD1 datasets. All datasets underwent conformation generation via DFT.
 
-### W93 Dataset - Elementary Reactions of Gas-Phase Compounds
+### W93 Dataset - Elementary Reactions of Gas-Phase Compounds [^1]
 
 - Initial reaction conformation dataset with transition states.
 - Around 12,000 samples for foundational analysis.
 - Used with the TS-Diff model.
 
-### TX1 Dataset - Transition X Dataset
+### TX1 Dataset - Transition X Dataset [^2]
 
 - Built upon W93 with re-optimized transition states.
 - Represents an improved version of W93.
 - Used with the OA-ReactDiff model.
 
-### RGD1 Dataset - Reaction Graph Depth One Dataset
+### RGD1 Dataset - Reaction Graph Depth One Dataset [^3]
 
 - New dataset with over 176,000 samples.
 - Features multiple transition state conformations.
@@ -90,7 +77,7 @@ Three main datasets were employed in this project for comprehensive comparisons:
 
 The primary dataset used is W93, comprehensively tested with PyTest. The other datasets have limited tests due to large .H5 files.
 
-## Repository Overview
+# Repository Overview
 
 The main source files are located in the `src` directory, containing the following essential files:
 
@@ -100,12 +87,9 @@ The main source files are located in the `src` directory, containing the followi
 
 Subdirectories within `src` include `Diffusion` and `EGNN`, housing appropriate backbones for respective models. All dataset classes and setup files are in the `data` directory.
 
-All dataset classes and setup files are located in the `data` directory.
-
-
 # Training and Testing with Configuration Files
 
-To facilitate seamless model training and testing, all operations are conducted through configuration files. Below is a brief overview of the various parameters that can be utilized within each diffusion model:
+To facilitate seamless model training and testing, all operations are conducted through configuration files. Below is a brief overview of the various parameters that can be used within each diffusion model:
 
 - **`train_test`**: Choose between 'Train' or 'Test': This directive controls whether a diffusion model should be trained or tested.
 - **`use_graph_in_model`**: Boolean: Determines whether a reaction graph should be integrated into the model.
@@ -133,8 +117,21 @@ Example configuration files are available in the `configs` directory.
 
 Each Python file and script includes a header at the top, providing information about its contents. Additionally, there's a reference to any adaptations made from previous codebases.
 
+- The EGNN model used was adapted from [^4].
+- The Diffusion Backbone was adapted from [^5].
 
 # Usage:
+
+**Note:** A (or more :) ) GPU(s) is **HIGHLY** recommended as these diffusion models are compute intensive. Also machine with many CPUs is better for pre-processing data.
+
+## Tested Configuration
+
+The TS-DiffuGen package has been thoroughly tested on the following system configuration:
+
+| **Operating System** | **Python Version** | **PyTorch Lightning Version** | **PyTorch CUDA Version**   |
+|----------------------|--------------------|-------------------------------|--------------------------|
+| Ubuntu               | 3.10.10            | 2.7.7                         | 2.0.1+cu117              |
+
 
 ## Setting up the Package: 
 
@@ -149,7 +146,7 @@ git clone https://github.com/schwallergroup/TS-DiffuGen.git
 cd TS-DiffuGen
 ```
 
-3. Create the Conda environment (May take a while !):
+3. Create the Conda environment (~ 4 minutes due to large imports):
 
 ```shell
 conda env create -f environment.yml
@@ -218,40 +215,55 @@ To set up the RGD1 dataset, follow these steps:
 
 ## WandB in Your Environment
 
-The training of diffusion models is enhanced with the integration of Weights and Biases (WandB). This enables real-time visualization of training and validation losses, as well as continuous monitoring of the training process. If WandB is not yet setup in your environment, when you train your first diffusion model, you will be asked to input a WandB API key. 
+The training of diffusion models is enhanced with the integration of Weights and Biases (WandB). WandB enables real-time, continuous monitoring of the training process. If WandB is not yet setup in your environment, when you train your first diffusion model, you will be asked to input a WandB API key. 
 
 If you do not already have an account, you can make one through the following link: [WandB](https://wandb.ai/)
-
-4. With this setup, WandB is configured within your environment, allowing you to proceed with training diffusion models.
 
 
 ## Training a new Diffusion Model:
 
-1. Change the parameters in the `configs/train_diffusion.yml` configuration file. 
+1. Change the parameters in the `configs/train_diffusion.yml` configuration file to your liking.
 2. Run the following command to train a new diffusion model:
 
     ```
     python src/train_test.py --config configs/train_diffusion.yml
     ```
 
-## Sampling from test set using a pre-trained Diffusion Model:
+## Sampling from test set using a trained Diffusion Model:
 
-The pre-trained_graph model was trained with the following parameters: 
+Similarly to when training, a testing config file should be adapted which points to the location of the trained diffusion model, includes the number of samples it should generate and matches the parameters used in the training process. Samples from the test set can then be generated using the following command: 
+
+    ```
+    python src/train_test.py --config configs/test_diffusion.yml
+    ```
+
+### Sampling from Pre-trained Diffusion Models
+
+#### Pre-trained Graph Model
+
+The `pre-trained_graph` model was trained with the following parameters:
+
 - Uses Reaction Graphs
-- Does not use Product coordinates 
-- 1,000 sampling steps
-- 8 EGNN layers
-- 64 hidden features
-- Sigmoid_2 noise schedule
+- Does not use Product Coordinates
+- Sampling Steps: 1,000
+- EGNN Layers: 8
+- Hidden Features: 64
+- Noise Schedule: Sigmoid_2
 
-The pre-trained_simple model was trained with the following parameters: 
-- TX1 Dataset
+#### Pre-trained Simple Model
+
+The `pre-trained_simple` model was trained with the following parameters:
+
+- Dataset: TX1
 - Without Reaction Graphs
-- Using Product coordinates in inference 
-- 2,000 sampling steps
-- 8 EGNN layers
-- 64 hidden features
-- Sigmoid_2 noise schedule
+- Uses Product Coordinates in Inference
+- Sampling Steps: 2,000
+- EGNN Layers: 8
+- Hidden Features: 64
+- Noise Schedule: Sigmoid_2
+
+You can use these pre-trained models to generate samples using the provided commands:
+
 
 1. Run the following script with the chosen testing config file:
     ```
@@ -262,24 +274,16 @@ The pre-trained_simple model was trained with the following parameters:
     python src/train_test.py --config configs/test_pre_trained_diffusion_with_graphs.yml
     ```
 
-2. Samples from the testset will be generated within the chosen model's Samples directory. This should take around 2 hours for the whole testset.
+2. Samples from the test set will be generated within the chosen model's Samples directory. This should take around 2 hours for the whole testset. Please be patient :)
 
-
-
-## Sampling from test set using a  Diffusion Model:
-
-1. Adapt the parameters in the `configs/test_diffusion.yml` to match those that you used during training. 
-2. Run the following command to sample from the test set using your trained diffusion model:
-
-    ```
-    python src/train_test.py --config configs/test_diffusion.yml
-    ```
 
 ### Evaluating Samples
 
-Before proceeding, ensure that all generated samples are organized within a designated `Samples` directory. Subsequently, execute the evaluation script by providing the path to your samples:
+All generated samples should be created within a designated `Samples` directory. A path to this directory will be used within the evaluation script.
 
 The evaluation script calculates the COV (Coverage) and MAT (Matching) scores for the generated samples, utilizing thresholds of 0.1 and 0.2 Å. Formulas for these metrics can be found in Sacha's thesis.
+
+The evaluation script can be executed with the following command: 
 
 ```shell
 python src/evaluate_samples PATH_TO_SAMPLES_DIRECTORY
@@ -303,6 +307,7 @@ All critical functions, classes, and methods from various scripts have been rigo
 
 
 ```shell
+cd TS-DiffuGen
 pytest tests/
 ```
 
@@ -314,8 +319,7 @@ pytest tests/
 
 [^3]: Zhao, Q., Vaddadi, S. M., Woulfe, M., Ogunfowora, L. A., Garimella, S. S., Isayev, O., & Savoie, B. M. (2023). Comprehensive exploration of graphically defined reaction spaces. Scientific Data, 10(1), 145. [Link](https://doi.org/10.1038/s41597-023-02043-z)
 
-<!-- [^4]: Satorras, V. G., Hoogeboom, E., & Welling, M. "E(n) Equivariant Graph Neural Networks." *February 2021.* [arXiv](https://arxiv.org/abs/2102.09844).
+[^4]: Satorras, V. G., Hoogeboom, E., & Welling, M. "E(n) Equivariant Graph Neural Networks." *February 2021.* [arXiv](https://arxiv.org/abs/2102.09844).
 
 [^5]: Hoogeboom, E., Satorras, V. G., Vignac, C., & Welling, M. "Equivariant Diffusion for Molecule Generation in 3D." *March 2022.* [arXiv](https://arxiv.org/abs/2203.05541).
 
- -->
