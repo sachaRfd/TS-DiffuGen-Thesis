@@ -87,6 +87,8 @@ The main source files are located in the `src` directory, containing the followi
 
 Subdirectories within `src` include `Diffusion` and `EGNN`, housing appropriate backbones for respective models. All dataset classes and setup files are in the `data` directory.
 
+Documentation can be found in the `docs` directory within a file called `TS-DiffuGen-Documentation.pdf`.
+
 # Training and Testing with Configuration Files
 
 To facilitate seamless model training and testing, all operations are conducted through configuration files. Below is a brief overview of the various parameters that can be used within each diffusion model:
