@@ -124,7 +124,7 @@ Each Python file and script includes a header at the top, providing information 
 
 # Usage:
 
-**Note:** A (or more :) ) GPU(s) is **HIGHLY** recommended as these diffusion models are compute intensive. Also machine with many CPUs is better for pre-processing data.
+**Note:** A GPU is **HIGHLY** recommended as these diffusion models are compute intensive.
 
 ## Tested Configuration
 
