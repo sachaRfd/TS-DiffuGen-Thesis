@@ -20,3 +20,11 @@ source_suffix = ".rst"
 master_doc = "index"
 exclude_patterns = ["_build"]
 autoclass_content = "both"
+
+# Mock Imports:
+autodoc_mock_imports = [
+    "torch",
+    "torch_geometric",
+    "sklearn",
+    "matplotlib",
+]
