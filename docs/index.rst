@@ -2,9 +2,6 @@ TS-DiffuGen: Diffusion Model for Reaction Transition State Optimization
 =====================================================================
 
 
-.. contents:: Table of Contents
-
-
 Introduction
 ------------
 
