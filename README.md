@@ -4,7 +4,6 @@
 [![Powered by RDKit](https://img.shields.io/badge/Powered%20by-RDKit-3838ff.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAFVBMVEXc3NwUFP8UPP9kZP+MjP+0tP////9ZXZotAAAAAXRSTlMAQObYZgAAAAFiS0dEBmFmuH0AAAAHdElNRQfmAwsPGi+MyC9RAAAAQElEQVQI12NgQABGQUEBMENISUkRLKBsbGwEEhIyBgJFsICLC0iIUdnExcUZwnANQWfApKCK4doRBsKtQFgKAQC5Ww1JEHSEkAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyMi0wMy0xMVQxNToyNjo0NyswMDowMDzr2J4AAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjItMDMtMTFUMTU6MjY6NDcrMDA6MDBNtmAiAAAAAElFTkSuQmCC)](https://www.rdkit.org/)
 ![Flate8 Status](https://github.com/schwallergroup/DiffSach/actions/workflows/flake8.yml/badge.svg)
 ![Tests Status](https://github.com/schwallergroup/DiffSach/actions/workflows/tests.yml/badge.svg)
-![Documentation Status](https://github.com/schwallergroup/DiffSach/actions/workflows/documentation.yml/badge.svg)
 
 
 This repository contains the code for implementing Sacha Raffaud's IRP project titled "Diffusion Models for Optimised Geometry Prediction".
@@ -13,7 +12,7 @@ This repository contains the code for implementing Sacha Raffaud's IRP project t
 
 ### Transition State Optimisation
 
-In this project, transition state optimisation involves generating accurate 3D representations of transition states. This is achieved by utilizing reactant and product coordinates along with atom types. Optionally, reaction graphs can also be used as input, currently available with the initial W93 Dataset.
+In this project, transition state optimisation involves generating accurate 3D representations of transition states. This is achieved by using reactant and product coordinates along with atom types. Optionally, reaction graphs can also be used as input, currently available with the initial W93 Dataset.
 
 
 
@@ -41,7 +40,7 @@ EGNNs are graph neural networks (GNN) that maintain equivariance to transformati
 
 ### Equivariant Diffusion Models
 
-After establishing a denoising framework, it can be applied iteratively in a diffusion model. In diffusion models, the process involves a forward diffusion, where noise is incrementally added to the input sample until it conforms to an isotropic Gaussian distribution. This is followed by learnable backward diffusion, where noise is subtracted to reconstruct the original data. This iterative backward process enables high-quality data generation and is what we are trying to optimise to allow for accurate TS generation.
+After establishing a denoising framework, it can be applied iteratively in a diffusion model. In diffusion models, the process involves a forward diffusion, where noise is incrementally added to the input sample until it conforms to an isotropic Gaussian distribution. This is followed by a learnable backward diffusion, where noise is subtracted to reconstruct the original data. This iterative backward process enables high-quality data generation and is what we are trying to optimise to allow for accurate TS generation.
 
 For detailed background and results, please refer to Sacha's thesis.
 
@@ -55,12 +54,12 @@ For detailed background and results, please refer to Sacha's thesis.
 
 ## Datasets
 
-Three main datasets were employed in this project for comprehensive comparisons: W93, TX1, and RGD1 datasets. All datasets underwent conformation generation via DFT.
+Three main datasets were employed in this project for comprehensive comparisons: W93, TX1, and RGD1 datasets. All datasets used DFT to generate the transition states.
 
 ### W93 Dataset - Elementary Reactions of Gas-Phase Compounds [^1]
 
 - Initial reaction conformation dataset with transition states.
-- Around 12,000 samples for foundational analysis.
+- Around 12,000 high precision samples.
 - Used with the TS-Diff model.
 
 ### TX1 Dataset - Transition X Dataset [^2]
@@ -75,7 +74,7 @@ Three main datasets were employed in this project for comprehensive comparisons:
 - Features multiple transition state conformations.
 - Includes larger molecules and offers new insights.
 
-The primary dataset used is W93, comprehensively tested with PyTest. The other datasets have limited tests due to large .H5 files.
+The primary dataset used is W93, comprehensively tested with PyTest. The other datasets have limited tests due to large .h5 files.
 
 # Repository Overview
 
@@ -190,7 +189,7 @@ To set up the W93 dataset, follow these steps:
 
 5. Run the `setup_dataset_files.py` script to process and organise the dataset using the following command (Will take ~ 3 minutes): 
 
-    ```
+    ```shell
     python data/Dataset_W93/setup_dataset_files.py
     ```
 
@@ -210,7 +209,7 @@ To set up the RGD1 dataset, follow these steps:
 2. Place the file in the  `data/Dataset_RGD1` directory
 3. Run the `parse_data.py` script with the following command:
 
-    ```
+    ```shell
     python data/Dataset_RGD1/parse_data.py
     ```
 
@@ -227,17 +226,17 @@ If you do not already have an account, you can make one through the following li
 1. Change the parameters in the `configs/train_diffusion.yml` configuration file to your liking.
 2. Run the following command to train a new diffusion model:
 
-    ```
+    ```shell
     python src/train_test.py --config configs/train_diffusion.yml
     ```
 
 ## Sampling from test set using a trained Diffusion Model:
 
 Similarly to when training, a testing config file should be adapted which points to the location of the trained diffusion model, includes the number of samples it should generate and matches the parameters used in the training process. Samples from the test set can then be generated using the following command: 
-
-    ```
-    python src/train_test.py --config configs/test_diffusion.yml
-    ```
+      
+      ```
+      python src/train_test.py --config configs/test_diffusion.yml
+      ```
 
 ### Sampling from Pre-trained Diffusion Models
 
@@ -258,7 +257,7 @@ The `pre-trained_simple` model was trained with the following parameters:
 
 - Dataset: TX1
 - Without Reaction Graphs
-- Uses Product Coordinates in Inference
+- Uses Product Coordinates
 - Sampling Steps: 2,000
 - EGNN Layers: 8
 - Hidden Features: 64
@@ -276,7 +275,7 @@ You can use these pre-trained models to generate samples using the provided comm
     python src/train_test.py --config configs/test_pre_trained_diffusion_with_graphs.yml
     ```
 
-2. Samples from the test set will be generated within the chosen model's Samples directory. This should take around 2 hours for the whole testset. Please be patient :)
+2. Samples from the test set will be generated within the chosen model's Samples directory. This should take around 2 hours for the whole test set.
 
 
 ### Evaluating Samples

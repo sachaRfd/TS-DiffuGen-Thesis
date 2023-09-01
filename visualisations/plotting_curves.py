@@ -11,6 +11,18 @@ import matplotlib.pyplot as plt
 
 
 def plot_data(timesteps, data, label, save_filename):
+    """
+    Plot a dataset against timesteps and save the plot as an image.
+
+    Parameters:
+    - timesteps (list or array-like): The time values for the x-axis.
+    - data (list or array-like): The data to be plotted on the y-axis.
+    - label (str): A label for the data, used in the plot legend and axis labels.
+    - save_filename (str): The filename for saving the plot as an image.
+
+    Returns:
+    - None
+    """  # noqa
     plt.plot(timesteps, data, label=label)
     plt.xlabel("Timesteps")
     plt.ylabel(label.capitalize())
