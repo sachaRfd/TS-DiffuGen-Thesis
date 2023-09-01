@@ -1,4 +1,4 @@
-# Diffusion Models for Optimized Geometry Prediction
+# Diffusion Models for Optimised Geometry Prediction
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
 [![Powered by RDKit](https://img.shields.io/badge/Powered%20by-RDKit-3838ff.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAFVBMVEXc3NwUFP8UPP9kZP+MjP+0tP////9ZXZotAAAAAXRSTlMAQObYZgAAAAFiS0dEBmFmuH0AAAAHdElNRQfmAwsPGi+MyC9RAAAAQElEQVQI12NgQABGQUEBMENISUkRLKBsbGwEEhIyBgJFsICLC0iIUdnExcUZwnANQWfApKCK4doRBsKtQFgKAQC5Ww1JEHSEkAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyMi0wMy0xMVQxNToyNjo0NyswMDowMDzr2J4AAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjItMDMtMTFUMTU6MjY6NDcrMDA6MDBNtmAiAAAAAElFTkSuQmCC)](https://www.rdkit.org/)
@@ -7,13 +7,13 @@
 ![Documentation Status](https://github.com/schwallergroup/DiffSach/actions/workflows/documentation.yml/badge.svg)
 
 
-This repository contains the code for implementing Sacha Raffaud's IRP project titled "Diffusion Models for Optimized Geometry Prediction".
+This repository contains the code for implementing Sacha Raffaud's IRP project titled "Diffusion Models for Optimised Geometry Prediction".
 
 ## Background
 
-### Transition State Optimization
+### Transition State Optimisation
 
-In this project, transition state optimization involves generating accurate 3D representations of transition states. This is achieved by utilizing reactant and product coordinates along with atom types. Optionally, reaction graphs can also be used as input, currently available with the initial W93 Dataset.
+In this project, transition state optimisation involves generating accurate 3D representations of transition states. This is achieved by utilizing reactant and product coordinates along with atom types. Optionally, reaction graphs can also be used as input, currently available with the initial W93 Dataset.
 
 
 
@@ -65,7 +65,7 @@ Three main datasets were employed in this project for comprehensive comparisons:
 
 ### TX1 Dataset - Transition X Dataset [^2]
 
-- Built upon W93 with re-optimized transition states.
+- Built upon W93 with re-optimised transition states.
 - Represents an improved version of W93.
 - Used with the OA-ReactDiff model.
 
@@ -188,7 +188,7 @@ To set up the W93 dataset, follow these steps:
      tar -xvf data/Dataset_W93/data/w93_dataset/wb97xd3.tar.gz -C data/Dataset_W93/data/TS/
      ```
 
-5. Run the `setup_dataset_files.py` script to process and organize the dataset using the following command (Will take ~ 3 minutes): 
+5. Run the `setup_dataset_files.py` script to process and organise the dataset using the following command (Will take ~ 3 minutes): 
 
     ```
     python data/Dataset_W93/setup_dataset_files.py
@@ -283,7 +283,7 @@ You can use these pre-trained models to generate samples using the provided comm
 
 All generated samples should be created within a designated `Samples` directory. A path to this directory will be used within the evaluation script.
 
-The evaluation script calculates the COV (Coverage) and MAT (Matching) scores for the generated samples, utilizing thresholds of 0.1 and 0.2 Å. Formulas for these metrics can be found in Sacha's thesis.
+The evaluation script calculates the COV (Coverage) and MAT (Matching) scores for the generated samples, using thresholds of 0.1 and 0.2 Å. Formulas for these metrics can be found in Sacha's thesis.
 
 The evaluation script can be executed with the following command: 
 
@@ -296,7 +296,7 @@ This command will trigger the evaluation process and display the computed COV an
 
 ## Visualisation with PyMol
 
-To utilize PyMol for visualization:
+To use PyMol for visualisation:
 
 1. Ensure PyMol is installed on your desktop along with the appropriate license. You can download it from [this link](https://pymol.org/2/).
 2. Place the PyMol script in the designated folder and execute it using the PyMol GUI.
@@ -317,7 +317,7 @@ pytest tests/
 
 [^1]: Grambow, C. A., Pattanaik, L., & Green, W. H. (2020). "Reactants, products, and transition states of elementary chemical reactions based on quantum chemistry." *2020.* [Link](https://doi.org/10.1038/s41597-020-0460-4)
 
-[^2]: Schreiner, M., Bhowmik, A., Vegge, T., Busk, J., & Winther, O. (2022). Transition1x - a dataset for building generalizable reactive machine learning potentials. Scientific Data, 9(1), 779. [Link](https://doi.org/10.1038/s41597-022-01870-w)
+[^2]: Schreiner, M., Bhowmik, A., Vegge, T., Busk, J., & Winther, O. (2022). Transition1x - a dataset for building generalisable reactive machine learning potentials. Scientific Data, 9(1), 779. [Link](https://doi.org/10.1038/s41597-022-01870-w)
 
 [^3]: Zhao, Q., Vaddadi, S. M., Woulfe, M., Ogunfowora, L. A., Garimella, S. S., Isayev, O., & Savoie, B. M. (2023). Comprehensive exploration of graphically defined reaction spaces. Scientific Data, 10(1), 145. [Link](https://doi.org/10.1038/s41597-023-02043-z)
 
