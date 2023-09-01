@@ -309,7 +309,6 @@ All critical functions, classes, and methods from various scripts have been rigo
 
 
 ```shell
-cd TS-DiffuGen
 pytest tests/
 ```
 
