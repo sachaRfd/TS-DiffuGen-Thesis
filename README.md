@@ -2,8 +2,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
 [![Powered by RDKit](https://img.shields.io/badge/Powered%20by-RDKit-3838ff.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAFVBMVEXc3NwUFP8UPP9kZP+MjP+0tP////9ZXZotAAAAAXRSTlMAQObYZgAAAAFiS0dEBmFmuH0AAAAHdElNRQfmAwsPGi+MyC9RAAAAQElEQVQI12NgQABGQUEBMENISUkRLKBsbGwEEhIyBgJFsICLC0iIUdnExcUZwnANQWfApKCK4doRBsKtQFgKAQC5Ww1JEHSEkAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyMi0wMy0xMVQxNToyNjo0NyswMDowMDzr2J4AAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjItMDMtMTFUMTU6MjY6NDcrMDA6MDBNtmAiAAAAAElFTkSuQmCC)](https://www.rdkit.org/)
-![Flate8 Status](https://github.com/schwallergroup/DiffSach/actions/workflows/flake8.yml/badge.svg)
-![Tests Status](https://github.com/schwallergroup/DiffSach/actions/workflows/tests.yml/badge.svg)
+
+
+<!-- ![Flate8 Status](https://github.com/schwallergroup/DiffSach/actions/workflows/flake8.yml/badge.svg)
+![Tests Status](https://github.com/schwallergroup/DiffSach/actions/workflows/tests.yml/badge.svg) -->
 
 
 This repository contains the code for implementing Sacha Raffaud's IRP project titled "Diffusion Models for Optimised Geometry Prediction".
@@ -234,9 +236,9 @@ If you do not already have an account, you can make one through the following li
 
 Similarly to when training, a testing config file should be adapted which points to the location of the trained diffusion model, includes the number of samples it should generate and matches the parameters used in the training process. Samples from the test set can then be generated using the following command: 
       
-      ```
-      python src/train_test.py --config configs/test_diffusion.yml
-      ```
+```
+python src/train_test.py --config configs/test_diffusion.yml
+```
 
 ### Sampling from Pre-trained Diffusion Models
 
