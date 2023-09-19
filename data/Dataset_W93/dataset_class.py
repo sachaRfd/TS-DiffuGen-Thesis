@@ -78,8 +78,21 @@ class W93_TS(Dataset):
             self.df = pd.read_csv(path_to_csv).ea
 
         # Data-structures:
+        if self.remove_hydrogens:
+            self.ohe_dict = {
+                "C": [1, 0, 0],
+                "N": [0, 1, 0],
+                "O": [0, 0, 1],
+            }
+        else:
+            self.ohe_dict = {
+                "C": [1, 0, 0, 0],
+                "N": [0, 1, 0, 0],
+                "O": [0, 0, 1, 0],
+                "H": [0, 0, 0, 1],
+            }
+
         self.atom_dict = {}
-        self.ohe_dict = {}
         self.data = []
         self.reactant = []
         self.product = []
@@ -106,9 +119,9 @@ class W93_TS(Dataset):
         self.one_hot_encode()
 
         assert (
-            self.reactant.shape
-            == self.product.shape
-            == self.transition_states.shape  # noqa
+            self.reactant_padded.shape
+            == self.product_padded.shape
+            == self.transition_states_padded.shape  # noqa
         )  # noqa
 
         if self.graph:
@@ -224,13 +237,6 @@ class W93_TS(Dataset):
         plt.show()
         plt.savefig(self.path_to_save_image)
 
-    def generate_one_hot_encodings(self, num_of_atoms):
-        """Generates one-hot encodings for atom types."""
-        for index, atom in enumerate(self.atom_dict):
-            ohe_vector = [0] * num_of_atoms
-            ohe_vector[index] = 1
-            self.ohe_dict[atom] = ohe_vector
-
     def convert_to_float(self, data):
         """
         Convert nested list elements to floats.
@@ -262,11 +268,6 @@ class W93_TS(Dataset):
         """
         Performs one-hot encoding of atom types and prepares other data-processing.
         """  # noqa
-        num_of_atoms = len(self.atom_dict)
-
-        # Generate OHE:
-        self.generate_one_hot_encodings(num_of_atoms)
-
         print("\nThe Atom Encoding is the following:\n")
         for atom, count in self.ohe_dict.items():
             print(f"\t{atom}: {count}")
@@ -294,10 +295,17 @@ class W93_TS(Dataset):
         max_length = max(len(mol) for mol in self.reactant)
 
         # Pad the nested lists to have the same length
-        self.reactant = self.pad_data(self.reactant, max_length=max_length)
-        self.product = self.pad_data(self.product, max_length=max_length)
-        self.transition_states = self.pad_data(
-            self.transition_states, max_length=max_length
+        self.reactant_padded = self.pad_data(
+            self.reactant,
+            max_length=max_length,
+        )
+        self.product_padded = self.pad_data(
+            self.product,
+            max_length=max_length,
+        )
+        self.transition_states_padded = self.pad_data(
+            self.transition_states,
+            max_length=max_length,
         )
 
         # Create the node mask:
@@ -366,19 +374,19 @@ class W93_TS(Dataset):
         # We can append it to the self.data tensor of graphs, and make the positions the TS, we also make it fully connected  # noqa
         for index in range(self.count):
             # Create Fully connected graph
-            num_nodes = self.reactant[index].shape[0]
+            num_nodes = self.reactant_padded[index].shape[0]
             edge_index = erdos_renyi_graph(num_nodes, edge_prob=1.0)
 
             graph = Data(
                 x=torch.cat(
                     [
-                        self.reactant[index, :, :],
-                        self.product[index, :, -3:],
-                        self.transition_states[index, :, -3:],
+                        self.reactant_padded[index, :, :],
+                        self.product_padded[index, :, -3:],
+                        self.transition_states_padded[index, :, -3:],
                     ],
                     dim=1,
                 ),
-                pos=self.transition_states[index, :, -3:],
+                pos=self.transition_states_padded[index, :, -3:],
                 edge_index=edge_index,
             )
             self.data.append(graph)
@@ -401,7 +409,7 @@ class W93_TS(Dataset):
         if self.context:
             print(f"Including {self.context} to context")
             for index in range(self.count):
-                ohes = self.reactant[index, :, :-3]
+                ohes = self.reactant_padded[index, :, :-3]
 
                 if self.context == "Van_Der_Waals":
                     # Get the atom type
@@ -430,16 +438,16 @@ class W93_TS(Dataset):
                     context_values = torch.tensor(
                         self.df.iloc[index], dtype=torch.float32
                     ).expand(  # noqa
-                        self.reactant[0].shape[0], 1
+                        self.reactant_padded[0].shape[0], 1
                     )
 
                 x = torch.cat(
                     [
                         ohes,
                         context_values,
-                        self.reactant[index, :, -3:],
-                        self.product[index, :, -3:],
-                        self.transition_states[index, :, -3:],
+                        self.reactant_padded[index, :, -3:],
+                        self.product_padded[index, :, -3:],
+                        self.transition_states_padded[index, :, -3:],
                     ],
                     dim=1,
                 )
@@ -450,9 +458,9 @@ class W93_TS(Dataset):
             for index in range(self.count):
                 x = torch.cat(
                     [
-                        self.reactant[index, :, :],
-                        self.product[index, :, -3:],
-                        self.transition_states[index, :, -3:],
+                        self.reactant_padded[index, :, :],
+                        self.product_padded[index, :, -3:],
+                        self.transition_states_padded[index, :, -3:],
                     ],
                     dim=1,
                 )
@@ -495,7 +503,7 @@ if __name__ == "__main__":
         dataset=train_dataset, batch_size=batch_size, shuffle=True
     )
 
-    print(next(iter(train_loader))[0][0][0])
+    print(next(iter(train_loader))[1])
 
     # sample, node_masks = next(iter(train_loader))
     # print(sample[10])

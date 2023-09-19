@@ -156,3 +156,5 @@ if __name__ == "__main__":
     train_dataloader = DataLoader(
         dataset=test_dataset, batch_size=64, shuffle=False
     )  # noqa
+
+    print(next(iter(train_dataloader)))

@@ -1,85 +1,59 @@
-# Sacha Raffaud sachaRfd and acse-sr1022
-
 import os
 import numpy as np
 import torch
 from torch_geometric.data import Dataset
 from torch_geometric.loader import DataLoader
-import matplotlib.pyplot as plt
+import pandas as pd
 from sklearn.model_selection import train_test_split
-
+from tqdm import tqdm
 
 """
 
-This python file contains the pytorch dataset class for
-the RGD1 Dataset.
+This dataset class will handle the different generated samples
+for the classification task.
 
-Please note that due to the size of the dataset (>170,000 samples)
-it does take some time to load the samples into the dataset class.
-However once setup (~ 40 seconds) it can easily be loaded into a
-dataloader.
-
-When this file is called:
-- It instanciates the dataset.
-- Loads it into a dataloader.
-- Prints the first atom of the first molecule to screen.
+Will read the .csv file and use those values as labels.
 
 """
 
 
-class RGD1_TS(Dataset):
-    NUCLEAR_CHARGES = {"H": 1, "C": 6, "N": 7, "O": 8, "None": 0}
-    VAN_DER_WAALS_RADIUS = {
-        "H": 1.20,
-        "C": 1.70,
-        "N": 1.55,
-        "O": 1.52,
-        "None": 0,
-    }
-
+class classifier_dataset(Dataset):
     def __init__(
         self,
-        directory="data/Dataset_RGD1/data/Clean_Geometries/",
-        remove_hydrogens=False,
-        plot_distribution=False,
+        directory="data/Dataset_generated_samples/Clean/",
+        csv_directory="data/Dataset_generated_samples/reaction_dmae_labels.csv",  # noqa
+        number_of_samples=40,
+        only_output_ts=False,
     ):
         super().__init__()
-
-        self.plot_distribution = plot_distribution
-        self.remove_hydrogens = remove_hydrogens
+        assert os.path.exists(directory)
+        assert os.path.exists(csv_directory)
         self.directory = directory
-        self.count = 0
 
-        # assert if there is context it should be either Nuclear, Van_Der_Waals or Activation_Energy  # noqa
-        self.valid_contexts = [
-            "Nuclear_Charges",
-            "Van_Der_Waals",
-            "Activation_Energy",
-        ]
+        # Read the CSV file:
+        self.csv_file = pd.read_csv(csv_directory, index_col=0)
+
+        self.number_of_samples = number_of_samples
+
+        self.only_output_ts = only_output_ts
 
         # Data-structures:
-        if self.remove_hydrogens:
-            self.ohe_dict = {
-                "C": [1, 0, 0],
-                "N": [0, 1, 0],
-                "O": [0, 0, 1],
-            }
-        else:
-            self.ohe_dict = {
-                "C": [1, 0, 0, 0],
-                "N": [0, 1, 0, 0],
-                "O": [0, 0, 1, 0],
-                "H": [0, 0, 0, 1],
-            }
+        self.ohe_dict = {
+            "C": [1, 0, 0, 0],
+            "N": [0, 1, 0, 0],
+            "O": [0, 0, 1, 0],
+            "H": [0, 0, 0, 1],
+        }
 
         self.atom_dict = {}
         self.data = []
         self.reactant = []
         self.product = []
-        self.transition_states = []
-        self.node_mask = []
+        self.samples = []
+        self.labels = []
 
-        assert os.path.exists(self.directory)
+        self.node_mask = []
+        self.count = 0
 
         self.load_data()
         print("Finished creating the dataset.")
@@ -91,19 +65,31 @@ class RGD1_TS(Dataset):
         self.count_data()
         for reaction_number in range(self.count):
             self.extract_data(reaction_number)
+
+        # Collapse all the list of lists:
+        self.reactant = [item for sublist in self.reactant for item in sublist]
+        self.product = [item for sublist in self.product for item in sublist]
+        self.samples = [item for sublist in self.samples for item in sublist]
+        self.labels = [item for sublist in self.labels for item in sublist]
+
         self.atom_count()
 
-        if self.plot_distribution:
-            self.plot_molecule_size_distribution()
+        assert (
+            len(self.reactant)
+            == len(self.product)
+            == len(self.samples)
+            == len(self.labels)
+        )
 
         self.one_hot_encode()
 
         assert (
             self.reactant_padded.shape
             == self.product_padded.shape
-            == self.transition_states_padded.shape  # noqa
+            == self.samples_padded.shape  # noqa
         )  # noqa
 
+        print("Setting up the final arrays.")
         self.create_data_array()
 
     def count_data(self):
@@ -123,8 +109,6 @@ class RGD1_TS(Dataset):
         with open(file_path, "r") as read_file:
             lines = read_file.readlines()
             for line in lines[2:]:
-                if self.remove_hydrogens and line[0] == "H":
-                    continue
                 data.append(line.split())
         return data
 
@@ -137,22 +121,48 @@ class RGD1_TS(Dataset):
         assert os.path.exists(path)  # Assert the path Exists
 
         # Check that in the path there are the three files:
-        # assert len(os.listdir(path)) == 3, "The folder is missing files."
+        assert (
+            len(os.listdir(path)) >= 3 + self.number_of_samples
+        ), "The folder is missing files."
 
-        # Now we can extract the Reactant, Product, TS info:
+        # Now we can extract the Reactant, Product, TS info 40 times:
+        reactant_matrix_list = []
+        product_matrix_list = []
+
         for file in os.listdir(path):
             if file.startswith("Reactant"):
                 # Extract reactant matrix
                 reactant_matrix = self.read_xyz_file(os.path.join(path, file))
-                self.reactant.append(reactant_matrix)
+
+                # Copy 40 times reactant_matrix and put it in list:
+                reactant_matrix_list.extend(
+                    [reactant_matrix] * self.number_of_samples
+                )  # noqa
+                self.reactant.append(reactant_matrix_list)
             elif file.startswith("Product"):
                 # Extract product matrix
                 product_matrix = self.read_xyz_file(os.path.join(path, file))
-                self.product.append(product_matrix)
-            elif file.startswith("TS"):
-                # Extract transition state matrix
-                ts_matrix = self.read_xyz_file(os.path.join(path, file))
-                self.transition_states.append(ts_matrix)
+
+                # Copy 40 times reactant_matrix and put it in list:
+                product_matrix_list.extend(
+                    [product_matrix] * self.number_of_samples
+                )  # noqa
+                self.product.append(product_matrix_list)
+
+        # Get the samples out:
+        samples = []
+        for i in range(self.number_of_samples):
+            current_path = path + f"/Sample_{i}.xyz"
+            ts_sample = self.read_xyz_file(current_path)
+            samples.append(ts_sample)
+        self.samples.append(samples)
+
+        # Get the RMSE Labels:
+        reaction_number = int(path.split("_")[-1])
+        row_of_rmse = self.csv_file.iloc[reaction_number][
+            : self.number_of_samples
+        ].to_list()
+        self.labels.append(row_of_rmse)
 
     def atom_count(self):
         """
@@ -166,51 +176,12 @@ class RGD1_TS(Dataset):
                 else:
                     self.atom_dict[atom[0]] += 1
 
-    def plot_molecule_size_distribution(self):
-        """
-        Plots the distribution of molecule sizes in the dataset.
-        """
-        # Count the size of each molecule
-        molecule_sizes = [
-            len(mol)
-            for mol in self.reactant + self.product + self.transition_states  # noqa
-        ]
-
-        # Create a dictionary to store the count of each molecule size
-        molecule_size_count = {}
-        for size in molecule_sizes:
-            if size not in molecule_size_count:
-                molecule_size_count[size] = 1
-            else:
-                molecule_size_count[size] += 1
-
-        # Sort the molecule sizes in ascending order
-        sorted_sizes = sorted(molecule_size_count.keys())
-
-        # Create lists for x-axis (molecule sizes) and y-axis (count)
-        x = [str(size) for size in sorted_sizes]
-        y = [molecule_size_count[size] for size in sorted_sizes]
-
-        # Plot the bar chart
-        plt.figure(figsize=(10, 6))
-        plt.bar(x, y)
-        plt.xlabel(
-            "Molecule Size", fontsize=15
-        )  # Increase font size for x-axis label  # noqa
-        plt.ylabel("Count", fontsize=15)  # Increase font size for y-axis label
-        plt.title(
-            "Distribution of Molecule Sizes", fontsize=16
-        )  # Increase font size for title
-        plt.xticks(rotation=90)
-        plt.tight_layout()
-        plt.show()
-
-    # def generate_one_hot_encodings(self, num_of_atoms):
-    #     """Generates one-hot encodings for atom types."""
-    #     for index, atom in enumerate(self.atom_dict):
-    #         ohe_vector = [0] * num_of_atoms
-    #         ohe_vector[index] = 1
-    #         self.ohe_dict[atom] = ohe_vector
+    def generate_one_hot_encodings(self, num_of_atoms):
+        """Generates one-hot encodings for atom types."""
+        for index, atom in enumerate(self.atom_dict):
+            ohe_vector = [0] * num_of_atoms
+            ohe_vector[index] = 1
+            self.ohe_dict[atom] = ohe_vector
 
     def convert_to_float(self, data):
         """
@@ -243,6 +214,7 @@ class RGD1_TS(Dataset):
         """
         Performs one-hot encoding of atom types and prepares other data-processing.
         """  # noqa
+
         print("\nThe Atom Encoding is the following:\n")
         for atom, count in self.ohe_dict.items():
             print(f"\t{atom}: {count}")
@@ -251,12 +223,12 @@ class RGD1_TS(Dataset):
         # Replace the atom str with OHE vector
         self.replace_atom_types_with_ohe_vectors(self.reactant)
         self.replace_atom_types_with_ohe_vectors(self.product)
-        self.replace_atom_types_with_ohe_vectors(self.transition_states)
+        self.replace_atom_types_with_ohe_vectors(self.samples)
 
         # Convert everything in the self.reactants, self.products, and self.transition_states to floats:  # noqa
         self.reactant = self.convert_to_float(self.reactant)
         self.product = self.convert_to_float(self.product)
-        self.transition_states = self.convert_to_float(self.transition_states)
+        self.samples = self.convert_to_float(self.samples)
 
         # Calculate the center of gravity and remove it
         self.delete_centre_gravity()
@@ -264,9 +236,9 @@ class RGD1_TS(Dataset):
         # Convert everything in the self.reactant, self.product, and self.transition_states back to lists  # noqa
         self.reactant = self.convert_to_list(self.reactant)
         self.product = self.convert_to_list(self.product)
-        self.transition_states = self.convert_to_list(self.transition_states)
+        self.samples = self.convert_to_list(self.samples)
 
-        # Check the maximum length among all nested lists for padding
+        # # Check the maximum length among all nested lists for padding
         max_length = max(len(mol) for mol in self.reactant)
 
         # Pad the nested lists to have the same length
@@ -278,8 +250,8 @@ class RGD1_TS(Dataset):
             self.product,
             max_length=max_length,
         )
-        self.transition_states_padded = self.pad_data(
-            self.transition_states,
+        self.samples_padded = self.pad_data(
+            self.samples,
             max_length=max_length,
         )
 
@@ -308,14 +280,15 @@ class RGD1_TS(Dataset):
         Needed to keep model roto-translation invariant
         """
         # Calculate the center of gravity for each molecule
-        for index in range(self.count):
+        for index in range(self.count * self.number_of_samples):
             reactant_coords = np.array(self.reactant[index])[
                 :, len(self.atom_dict) :  # noqa
             ].astype(float)
             product_coords = np.array(self.product[index])[
                 :, len(self.atom_dict) :  # noqa
             ].astype(float)
-            ts_coords = np.array(self.transition_states[index])[
+
+            ts_coords = np.array(self.samples[index])[
                 :, len(self.atom_dict) :  # noqa
             ].astype(float)
 
@@ -334,11 +307,8 @@ class RGD1_TS(Dataset):
             self.product[index][:, len(self.atom_dict) :] = (  # noqa
                 product_coords - product_center
             )
-
-            self.transition_states[index] = np.array(
-                self.transition_states[index]
-            )  # noqa
-            self.transition_states[index][:, len(self.atom_dict) :] = (  # noqa
+            self.samples[index] = np.array(self.samples[index])
+            self.samples[index][:, len(self.atom_dict) :] = (  # noqa
                 ts_coords - ts_center
             )
 
@@ -358,22 +328,31 @@ class RGD1_TS(Dataset):
         Creates data arrays with context information based on the selected context or without context.
         """  # noqa
         print("Not including Context information")
-        for index in range(self.count):
-            x = torch.cat(
-                [
-                    self.reactant_padded[index, :, :],
-                    self.product_padded[index, :, -3:],
-                    self.transition_states_padded[index, :, -3:],
-                ],
-                dim=1,
-            )
+        for index in tqdm(range(self.count * self.number_of_samples)):
+            if self.only_output_ts:
+                x = torch.cat(
+                    [
+                        self.reactant_padded[index, :, :],
+                        self.samples_padded[index, :, :],
+                    ],
+                    dim=1,
+                )
+            else:
+                x = torch.cat(
+                    [
+                        self.reactant_padded[index, :, :],
+                        self.product_padded[index, :, -3:],
+                        self.samples_padded[index, :, -3:],
+                    ],
+                    dim=1,
+                )
             self.data.append(x)
 
     def get(self, idx):
         """
         Retrieves a data sample and its corresponding node mask.
         """
-        return self.data[idx], self.node_mask[idx]
+        return self.data[idx], self.node_mask[idx], self.labels[idx]
 
     def len(self):
         """
@@ -383,12 +362,8 @@ class RGD1_TS(Dataset):
 
 
 if __name__ == "__main__":
-    remove_hydrogens = False
-    dataset = RGD1_TS(
-        directory="data/Dataset_RGD1/data/Clean_Geometries/",
-        remove_hydrogens=remove_hydrogens,
-        plot_distribution=False,
-    )
+    print("Running Script")
+    dataset = classifier_dataset(number_of_samples=10)
 
     # In all papers they use 8:1:1 ratio
     train_dataset, test_dataset = train_test_split(
@@ -398,10 +373,18 @@ if __name__ == "__main__":
         test_dataset, test_size=0.5, random_state=42
     )
 
-    batch_size = 20
+    batch_size = 32
     train_loader = DataLoader(
-        dataset=train_dataset, batch_size=batch_size, shuffle=True
+        dataset=train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
     )
 
-    print(next(iter(train_loader))[0][0][0])
-    print(next(iter(train_loader))[1])
+    sample, node_mask, label = next(iter(train_loader))
+    print(sample.shape)
+    print(sample)
+
+    print(node_mask.shape)
+    print(node_mask)
+
+    print(label)

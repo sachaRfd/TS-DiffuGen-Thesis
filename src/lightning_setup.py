@@ -31,7 +31,7 @@ from data.Dataset_W93.dataset_reaction_graph import (
 )
 from data.Dataset_TX1.dataset_TX1_class import TX1_dataset
 from data.Dataset_RGD1.RGD1_dataset_class import RGD1_TS
-
+from data.Dataset_RDKIT.RDKIT_dataset_class import RDKIT_dataset
 from pytorch_lightning.callbacks import LearningRateMonitor
 
 
@@ -79,6 +79,7 @@ class LitDiffusionModel(pl.LightningModule):
         no_product=False,
         batch_size=64,
         pytest_time=False,
+        use_mse=True,
     ):
         super(LitDiffusionModel, self).__init__()
         self.dataset_to_use = dataset_to_use
@@ -110,7 +111,8 @@ class LitDiffusionModel(pl.LightningModule):
             self.dataset_to_use == "W93"
             or self.dataset_to_use == "TX1"
             or self.dataset_to_use == "RGD1"
-        ), "Dataset can only be W93 for TS-DIFF dataset or TX1 for the MIT paper OR the new RGD1 dataset"  # noqa
+            or self.dataset_to_use == "RDKIT"
+        ), "Dataset can only be W93 for TS-DIFF dataset or TX1 for the MIT paper OR the new RGD1 or RDKIT datasets"  # noqa
 
         # Add asserts for what is possible with the TX1 dataset and what is possible with the W93 dataset  # noqa
         if self.dataset_to_use == "TX1":
@@ -121,14 +123,19 @@ class LitDiffusionModel(pl.LightningModule):
                 not self.remove_hydrogens
             ), "For the TX1 dataset, removing hydrogens is not allowed."
 
+        if self.dataset_to_use == "RDKIT":
+            assert (
+                not self.include_context
+            ), "For the RDKIT dataset, including context is not allowed."
+            assert (
+                not self.remove_hydrogens
+            ), "For the RDKIT dataset, removing hydrogens is not allowed."
+
         # Add asserts for what is possible with the TX1 dataset and what is possible with the W93 dataset  # noqa
         if self.dataset_to_use == "RGD1":
             assert (
                 not self.include_context
             ), "For the RGD1 dataset, including context is not allowed."
-            # assert (
-            #     not self.remove_hydrogens
-            # ), "For the RGD1 dataset, removing hydrogens is not allowed."
 
         # For now, context is only 1 variable added to the node features - Only possible with the W93 dataset - Try and not make this hard-coded  # noqa
         if self.include_context and self.dataset_to_use == "W93":
@@ -188,6 +195,19 @@ class LitDiffusionModel(pl.LightningModule):
                 train_dataset, test_size=1 / 9, random_state=42, shuffle=True
             )
 
+        elif self.dataset_to_use == "RDKIT":
+            self.dataset = RDKIT_dataset()
+
+            # We want to match the sizes used in MIT paper 9,000 for training and 1,073 for testing  # noqa
+            train_dataset, self.test_dataset = train_test_split(
+                self.dataset, test_size=0.1, random_state=42, shuffle=True
+            )
+
+            # Split the training set into a 8:1 split to train/val set:
+            self.train_dataset, self.val_dataset = train_test_split(
+                train_dataset, test_size=1 / 9, random_state=42, shuffle=True
+            )
+
         elif self.dataset_to_use == "RGD1":
             self.dataset = RGD1_TS(
                 directory="data/Dataset_RGD1/data/Single_and_Multiple_TS",
@@ -225,6 +245,7 @@ class LitDiffusionModel(pl.LightningModule):
             timesteps=timesteps,
             noise_schedule=noise_schedule,
             device=device,
+            use_mse=use_mse,
         )
 
         # Save the Hyper-params used:
@@ -1015,22 +1036,22 @@ if __name__ == "__main__":
     device = dynamics.setup_device()
 
     # Assign which dataset to use:
-    dataset_to_use = "RGD1"
+    dataset_to_use = "RDKIT"
 
     # Use Graph Model or not?
-    use_reaction_graph_model = True
+    use_reaction_graph_model = False
 
     # Setup Hyper-paremetres:
     learning_rate_schedule = False
     random_rotations = False  # Part of Data Augmentation
-    augment_train_set = False  # Also part of Data Augmentation
-    remove_hydrogens = True  # Only Possible with the W93 Dataset
+    augment_train_set = True  # Also part of Data Augmentation
+    remove_hydrogens = False  # Only Possible with the W93 Dataset
     include_context = (
         None  # "Activation_Energy"  # Only Possible with the W93 Dataset # noqa
     )
 
     # # If we do not include the product in the diffusoin step:
-    no_product = True
+    no_product = False
     in_edge_nf = 2  # When we have the product in the graph
 
     in_node_nf = get_node_features(
@@ -1040,19 +1061,15 @@ if __name__ == "__main__":
     )
     noise_schedule = "sigmoid_2"  # "sigmoid_INTEGER"
     timesteps = 1_000
-    batch_size = 294
+    batch_size = 128
     n_layers = 8
     hidden_features = 64
-    lr = 1e-4
-    epochs = 2_000
+    lr = 5e-5
+    epochs = 1_000
 
     # Setup Saving path:
     model_name = f"{no_product}_no_product_{use_reaction_graph_model}_graph_model_{dataset_to_use}_dataset_{include_context}_context_{random_rotations}_Random_rotations_{augment_train_set}_augment_train_set_{n_layers}_layers_{hidden_features}_hiddenfeatures_{lr}_lr_{noise_schedule}_{timesteps}_timesteps_{batch_size}_batch_size_{epochs}_epochs_{remove_hydrogens}_Rem_Hydrogens"  # noqa
-    folder_name = (
-        f"src/Diffusion/{dataset_to_use}TESTING_FAKE_dataset_weights/"
-        + model_name
-        + "/"
-    )  # noqa
+    folder_name = f"trained_models/{dataset_to_use}/" + model_name + "/"  # noqa
 
     # Create the directories:
     if not os.path.exists(folder_name):
@@ -1110,7 +1127,7 @@ if __name__ == "__main__":
 
     # Create WandB logger:
     wandb_logger = pytorch_lightning.loggers.WandbLogger(
-        project="Diffusion_1234testingsetup",
+        project="RDKIT_dataset_3000",
         name=model_name,  # Diffusion_large_dataset
     )
 
@@ -1125,6 +1142,12 @@ if __name__ == "__main__":
         callbacks=[lr_monitor],
         fast_dev_run=False,
     )
+
+    # Load the previous weights:
+    trained_model_path = "trained_models/RDKIT_dataset_3000/Weights/weights.pth"  # noqa
+
+    # Load the state dict into the model:
+    lit_diff_model.load_state_dict(torch.load(trained_model_path))
 
     trainer.fit(lit_diff_model)
 

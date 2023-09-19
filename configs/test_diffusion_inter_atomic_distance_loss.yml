@@ -1,40 +1,44 @@
 # Training
-train_test: train
+train_test: test
 
 # Use Graph or Not: 
 use_graph_in_model: False
 
-
 # Use MSE in loss: 
 use_mse: False
 
+
 # Diffusion Variables
-dataset_to_use: RGD1
+dataset_to_use: W93
 timesteps: 1_000
 noise_schedule: sigmoid_2
 remove_hydrogens: False
 random_rotations: False
-augment_train_set: False
+augment_train_set: True
 include_context: 
 remove_product: False
 
 
 
 # Training Variables: 
-lr: 0.0005
-epochs: 500
-batch_size: 256
+lr: 0.0002
+epochs: 300
+batch_size: 64
 learning_rate_scheduler: False 
-model_name: RGD1_Model_trained_with_RMSD_and_DMAE 
-folder_name: RGD1_Model_trained_with_RMSD_and_DMAE
+model_name: Testing_Diffusion_Model_with_DMAE_loss
+folder_name: Mode_with_DMAE_loss
 
 
-wandb_project_name: RGD1_Model_trained_with_RMSD_and_DMAE
+wandb_project_name: Diff_with_MAE_loss
 
 # Model Variables: 
-n_layers: 8
+n_layers: 4
 hidden_features: 64 
 
+
+# Number of samples to generate when testing: 
 test_sampling_number: 10
+
+
 
 

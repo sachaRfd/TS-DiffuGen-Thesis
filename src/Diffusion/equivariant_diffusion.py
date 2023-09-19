@@ -1,15 +1,12 @@
 # Sacha Raffaud sachaRfd and acse-sr1022
 
-import os
-
-import numpy as np
 import torch
+from torch import autograd  # noqa
 from torch.nn import functional as F
 import src.Diffusion.utils as diffusion_utils
 import src.EGNN.utils as EGNN_utils
 from tqdm import tqdm
 from torch.nn import MSELoss
-import wandb
 from sklearn.model_selection import train_test_split
 
 from data.Dataset_W93.dataset_class import W93_TS
@@ -19,6 +16,7 @@ from src.EGNN.dynamics_with_graph import (
 )
 from src.Diffusion.noising import PredefinedNoiseSchedule
 
+from src.Classifier.classifier import EGNN_graph_prediction
 
 from torch.utils.data import DataLoader
 from torch import expm1
@@ -64,6 +62,7 @@ class DiffusionModel(torch.nn.Module):
         timesteps: int = 1000,
         noise_schedule: str = "cosine",
         noise_precision: float = 1e-4,
+        use_mse=True,
     ):
         super().__init__()
 
@@ -71,6 +70,7 @@ class DiffusionModel(torch.nn.Module):
         self.device = device
 
         # MSE is used as the loss function from paper:
+        self.use_mse = use_mse
         self.mse = MSELoss()
 
         # Setup the noise schedule and get Gamma Values:
@@ -190,7 +190,9 @@ class DiffusionModel(torch.nn.Module):
         return sigma2_t_given_s, sigma_t_given_s, alpha_t_given_s
 
     def compute_x_pred(self, net_out, zt, gamma_t):
-        """Commputes x_pred, i.e. the most likely prediction of x."""
+        """
+        Commputes x_pred, i.e. the most likely prediction of x.
+        """
         sigma_t = self.sigma(gamma_t, target_tensor=net_out)
         alpha_t = self.alpha(gamma_t, target_tensor=net_out)
         eps_t = net_out
@@ -199,32 +201,72 @@ class DiffusionModel(torch.nn.Module):
         )  # This is from the prediction formula fron noise to prediction value
         return x_pred
 
-    def compute_error(self, net_out, eps):
-        """Computes the error (MSE) between the true and predicted noise"""
-        error = self.mse(eps, net_out)
-        return error
+    def compute_inter_atomic_distance(self, coordinates):
+        """
+        Calculate pairwise distance matrix from 3D coordinates.
 
-    def log_constants_p_x_given_z0(self, x, node_mask):
-        """Computes p(x|z0)."""
-        batch_size = x.size(0)
+        Args:
+            coordinates (torch.Tensor): Batch of 3D coordinates with shape (bs, num_atoms, 3).
 
-        n_nodes = node_mask.squeeze(1).sum(
+        Returns:
+            torch.Tensor: Pairwise distance matrix with shape (bs, num_atoms, num_atoms).
+        """  # noqa
+
+        # Expand dimensions to allow broadcasting
+        expanded_coords = coordinates.unsqueeze(
+            2
+        )  # Shape: (bs, num_atoms, 1, 3)  # noqa
+        expanded_coords_transpose = coordinates.unsqueeze(
             1
-        )  # N has shape [B]  # Changed it from squeeze 2
-        assert n_nodes.size() == (batch_size,)
-        degrees_of_freedom_x = (n_nodes - 1) * self.n_dims
+        )  # Shape: (bs, 1, num_atoms, 3)
 
-        zeros = torch.zeros((x.size(0), 1), device=x.device)
-        gamma_0 = self.gamma(zeros)
+        # Compute the pairwise distance matrix
+        diff = (
+            expanded_coords - expanded_coords_transpose
+        )  # Shape: (bs, num_atoms, num_atoms, 3)
+        squared_distances = torch.sum(
+            diff**2, dim=-1
+        )  # Shape: (bs, num_atoms, num_atoms)
+        distance_matrix = torch.sqrt(squared_distances + 1e-8)
 
-        # Recall that sigma_x = sqrt(sigma_0^2 / alpha_0^2) = SNR(-0.5 gamma_0).# noqa
-        log_sigma_x = 0.5 * gamma_0.view(batch_size)
+        return distance_matrix
 
-        return degrees_of_freedom_x.to(self.device) * (
-            -log_sigma_x.to(self.device) - 0.5 * np.log(2 * np.pi)
-        )
+    def compute_error(self, net_out, eps, use_mse=True):
+        """
+        Computes the error (MSE) between the true and predicted noise, otherwise
+        use the Inter-atomic distance norm
+        """  # noqa
 
-    def sample_p_xh_given_z0(self, z0, node_mask, edge_mask):
+        if use_mse:
+            error = self.mse(eps, net_out)
+            return error
+        else:
+            # Use both in loss function:
+            error = self.mse(eps, net_out)
+            # Use Inter-atomic-distance matrix:
+            eps_iad = self.compute_inter_atomic_distance(eps)
+            net_out_iad = self.compute_inter_atomic_distance(net_out)
+
+            # Get number of atoms:
+            bs, N_atom, _ = eps.shape
+
+            error_2 = torch.tensor(0.0, device=eps.device)
+
+            for i in range(bs):
+                # Divide by 2 as we are dealing with a symmetric matrix:
+                dmae_sum = torch.sum(torch.abs(eps_iad[i] - net_out_iad[i])) / 2  # noqa
+
+                # Calculate the error for this sample and add it to the list:
+                error_2 += 2.0 / (N_atom * (N_atom - 1)) * dmae_sum
+
+            # Divide by Bath_size:
+            error_2 /= bs
+
+            error = error.clone().requires_grad_(True)
+
+            return error + error_2
+
+    def sample_p_xh_given_z0(self, z0, node_mask, edge_mask, guided=False):
         """Samples x ~ p(x|z0)."""
         zeros = torch.zeros(size=(z0.size(0), 1), device=z0.device)
         gamma_0 = self.gamma(zeros)
@@ -246,22 +288,34 @@ class DiffusionModel(torch.nn.Module):
             gamma_t=gamma_0.to(self.device),
         )
 
-        x = self.sample_normal(
-            mu=mu_x.to(self.device),
-            sigma=sigma_x.to(self.device),
-            node_mask=node_mask.to(self.device),
-        )
+        if guided:
+            x = self.sample_normal(
+                mu=mu_x.to(self.device),
+                sigma=sigma_x.to(self.device),
+                node_mask=node_mask.unsqueeze(2)
+                .view(z0.shape[0], -1, 1)
+                .expand(mu_x[:, :, -3:].size()),
+            )
+        else:
+            x = self.sample_normal(
+                mu=mu_x.to(self.device),
+                sigma=sigma_x.to(self.device),
+                node_mask=node_mask.to(self.device),
+            )
 
         return x
 
-    def sample_normal(self, mu, sigma, node_mask):
+    def sample_normal(self, mu, sigma, node_mask, guidance=False):
         """
         Samples from a Normal distribution and returns the noisy X_t sample.
         """
         bs = mu.size(0)
         eps = self.sample_position(bs, mu.size(1), node_mask)
 
-        return mu + sigma * eps
+        if guidance:
+            return mu + sigma * eps, eps
+        else:
+            return mu + sigma * eps
 
     def sample_position(self, n_samples, n_nodes, node_mask):
         """
@@ -322,7 +376,7 @@ class DiffusionModel(torch.nn.Module):
         )
 
         # Compute the error.
-        error = self.compute_error(net_out, eps)
+        error = self.compute_error(net_out, eps, use_mse=self.use_mse)
 
         return error
 
@@ -417,13 +471,10 @@ class DiffusionModel(torch.nn.Module):
         Draw samples from the generative model.
         """
 
-        # Predefined_h compared to theirs
-        predefined_h = h
-
         z = self.sample_position(n_samples, n_nodes, node_mask)
 
         # Concatenate the predefined H:
-        z = torch.cat([predefined_h.to(self.device), z.to(self.device)], dim=2)
+        z = torch.cat([h.to(self.device), z.to(self.device)], dim=2)
 
         # Check the coordinates have zero mean
         EGNN_utils.assert_mean_zero_with_mask(
@@ -471,6 +522,206 @@ class DiffusionModel(torch.nn.Module):
         EGNN_utils.assert_mean_zero_with_mask(
             x, node_mask.unsqueeze(2).expand(x.size())
         )
+
+        max_cog = torch.sum(x, dim=1, keepdim=True).abs().max().item()
+        if max_cog > 5e-2:
+            print(
+                f"Warning cog drift with error {max_cog:.3f}. Projecting "
+                f"the positions down."
+            )
+            x = diffusion_utils.remove_mean_with_mask(
+                x, node_mask.unsqueeze(2).expand(x.size())
+            )
+
+        return x
+
+    def sample_p_zs_given_zt_guidance(
+        self,
+        s,
+        t,
+        zt,
+        node_mask,
+        edge_mask,
+        # target_function,
+        # scale=0.9,
+    ):
+        """
+        Adapted from:
+        https://gitlab.com/porannegroup/gaudi/
+
+        Samples from zs ~ p(zs | zt), with
+        extra conditioning on y.
+        Only used during sampling.
+        """
+        gamma_s = self.gamma(s)
+        gamma_t = self.gamma(t)
+
+        (
+            sigma2_t_given_s,
+            sigma_t_given_s,
+            alpha_t_given_s,
+        ) = self.sigma_and_alpha_t_given_s(gamma_t, gamma_s, zt)
+
+        sigma_s = self.sigma(gamma_s, target_tensor=zt)
+        sigma_t = self.sigma(gamma_t, target_tensor=zt)
+
+        # Neural net prediction.
+        with torch.no_grad():
+            eps_t = self.phi(zt, t, node_mask, edge_mask)
+
+        # Calculate the predicted coordinates of zs:
+        x_pred_s = self.compute_x_pred(
+            net_out=eps_t,
+            zt=zt[:, :, -3:],
+            gamma_t=gamma_t,
+        )
+
+        # Compute mu for p(zs | zt).
+        mu = zt[:, :, -3:].to(self.device) / alpha_t_given_s.to(self.device) - (  # noqa
+            sigma2_t_given_s.to(self.device)
+            / alpha_t_given_s.to(self.device)
+            / sigma_t.to(self.device)
+        ) * eps_t.to(self.device)
+
+        # Compute sigma for p(zs | zt).
+        sigma = sigma_t_given_s * sigma_s / sigma_t
+
+        # Sample zs given the paramters derived from zt:
+        # Also returns the noise that was added for future use
+        zs, eps_used = self.sample_normal(
+            mu,
+            sigma,
+            node_mask.unsqueeze(2)
+            .view(zt.shape[0], -1, 1)
+            .expand(zt[:, :, -3:].size()),
+            guidance=True,
+        )
+
+        # Concatenate the reactant and product to the
+        # x prediction:
+        x_pred_s = torch.cat(
+            [zt[:, :, :-3].to(self.device), x_pred_s[:, :, -3:]],
+            dim=2,
+        )
+
+        # # guidance:
+        # with torch.enable_grad():
+        #     x_pred_s = x_pred_s.requires_grad_()
+        #     energy = (
+        #         scale
+        #         * target_function(
+        #             x_pred_s,
+        #             node_mask,
+        #             edge_mask,
+        #             # t,
+        #         ).sum()
+        #     )
+        #     grad = autograd.grad(energy, x_pred_s)[0]
+
+        # max_norm = 10
+        # grad_norm = grad.norm(dim=[1, 2])
+        # clip_coef = max_norm / (grad_norm + 1e-6)
+        # clip_coef_clamped = torch.clamp(clip_coef, max=1.0)
+        # grad *= clip_coef_clamped[:, None, None]
+
+        # # grad = torch.cat(
+        # #     [
+        # #         # grad[:, :, :-3],
+        # #         diffusion_utils.remove_mean_with_mask(
+        # #             grad[:, :, -3:],
+        # #             node_mask,
+        # #         ),
+        # #     ],
+        # #     dim=2,
+        # # )
+        # grad = diffusion_utils.remove_mean_with_mask(
+        #     grad[:, :, -3:],
+        #     node_mask,
+        # )
+
+        # # Sigma Reduces as we get better and better samples:
+        # zs = zs - sigma * grad
+
+        # # Project down to avoid numerical runaway of the center of gravity.
+        zs = torch.cat(
+            [
+                zt[:, :, :-3].to(self.device),
+                EGNN_utils.remove_mean_with_mask(
+                    zs[:, :, -3:],
+                    node_mask.unsqueeze(2)
+                    .view(zt.shape[0], -1, 1)
+                    .expand(zt[:, :, -3:].size()),  # noqa
+                ).to(self.device),
+            ],
+            dim=2,
+        )
+        return zs, x_pred_s
+
+    def guided_sampling(
+        self,
+        h,
+        n_samples,
+        n_nodes,
+        node_mask,
+        edge_mask,
+        edges,
+        classifier_model=EGNN_graph_prediction,
+    ):
+        """
+        Draw samples from the generative model, and guide
+        them using the pre-trained classifier model.
+        """
+
+        # Generate random noise:
+        z = self.sample_position(n_samples, n_nodes, node_mask)
+
+        # Concatenate the predefined reactant and product:
+        z = torch.cat([h.to(self.device), z.to(self.device)], dim=2)
+
+        # Iteratively sample p(z_s | z_t) for t = 1, ..., T, with s = t - 1.
+        preds = []
+        for s in reversed(range(0, self.T)):
+            s_array = torch.full((n_samples, 1), fill_value=s, device=z.device)
+            t_array = s_array + 1
+            s_array = s_array / self.T
+            t_array = t_array / self.T
+
+            z, current_prediction_x = self.sample_p_zs_given_zt_guidance(
+                s_array.to(self.device),
+                t_array.to(self.device),
+                z.to(self.device),
+                node_mask.to(self.device),
+                edge_mask.to(self.device),
+            )
+
+            # Calculate the proba that D-MAE is below 0.1:
+            # current_prediction = current_prediction_x.view(-1, 13)
+            # x_ = current_prediction_x[:, :, -3:].view(-1, 3)
+            # node_mask = node_mask.view(-1, 1)
+
+            # edge_mask = edge_mask.view(n_samples * 23 * 23, 1)
+
+            pred_label = classifier_model(
+                h=current_prediction_x.view(-1, 13),
+                x=current_prediction_x[:, :, -3:].view(-1, 3),
+                edge_index=edges,
+                node_mask=node_mask.view(-1, 1),
+                edge_mask=edge_mask.view(n_samples * 23 * 23, 1),
+            )
+            pred_label = torch.argmax(pred_label, 1)
+            if s % 100 == 0:
+                print(f"Timestep:\t{s}\t {pred_label}")
+                preds.append(current_prediction_x)
+
+        # Finally sample p(x, h | z_0).
+        x = self.sample_p_xh_given_z0(
+            z,
+            node_mask.to(self.device),
+            edge_mask.to(self.device),
+            guided=True,
+        )
+
+        return x, preds
 
         max_cog = torch.sum(x, dim=1, keepdim=True).abs().max().item()
         if max_cog > 5e-2:
@@ -912,31 +1163,20 @@ if __name__ == "__main__":
 
     # Setup the device:
     device = dynamics.setup_device()
-    # device = "cpu"
 
     remove_hydrogens = False
     include_context = False
-
-    # # if remove_hydrogens:
-    # #     in_node_nf = 9 + 1  # To account for time and 1 less OHE
-    # # else:
-    # #     in_node_nf = 10 + 1  # To account for time
-
-    # if include_context:
-    #     in_node_nf += 1
 
     in_node_nf = get_node_features(
         remove_hydrogens=remove_hydrogens, include_context=include_context
     )
 
-    # out_node = 3
-    # n_dims = 3
-    noise_schedule = "cosine"
+    noise_schedule = "sigmoid_2"
     timesteps = 2_000
     batch_size = 64
-    n_layers = 3
+    n_layers = 4
     hidden_features = 64
-    lr = 8e-4
+    lr = 4e-4
     epochs = 100
 
     # Setup for clear model Tracking:
@@ -1010,6 +1250,7 @@ if __name__ == "__main__":
         timesteps=timesteps,
         device=device,
         noise_schedule=noise_schedule,
+        use_mse=False,
     )
 
     # diffusion_model_graph = DiffusionModel_graph(
@@ -1031,12 +1272,6 @@ if __name__ == "__main__":
         # Setup training mode:
         diffusion_model.train()
         for batch, node_mask in tqdm(train_loader):
-            # Check that the values are centred:
-            # diffusion_utils.assert_mean_zero_with_mask(
-            #     batch[:, :, -3:],
-            #     node_mask.unsqueeze(2).expand(batch[:, :, -3:].size()),  # noqa
-            # )
-
             optimiser.zero_grad()
 
             h = batch[:, :, :-3].to(device)
@@ -1075,7 +1310,7 @@ if __name__ == "__main__":
 
         total_train_loss /= len(train_loader)
         print(f"At epoch {epoch} \t Train Loss = {total_train_loss}")
-        wandb.log({"Train_loss": total_train_loss})
+        # wandb.log({"Train_loss": total_train_loss})
 
         # Setup Validation part:
         diffusion_model.eval()
@@ -1112,59 +1347,4 @@ if __name__ == "__main__":
 
         total_val_loss /= len(val_loader)
         print(f"At epoch {epoch} \t Val Loss = {total_val_loss}")
-        wandb.log({"val_loss": total_val_loss})
-
-    # Test the whole test set:
-    total_test_loss = 0
-    diffusion_model.eval()
-    with torch.no_grad():
-        for batch, node_mask in tqdm(test_loader):
-            h = batch[:, :, :-3].to(device)
-            x = batch[:, :, -3:].to(device)
-
-            # setup the edge_mask:
-            edge_mask = node_mask.unsqueeze(1) * node_mask.unsqueeze(2)
-
-            # Create mask for diagonal, as atoms cannot connect to themselves:
-            diag_mask = (
-                ~torch.eye(edge_mask.size(-1), device=edge_mask.device)
-                .unsqueeze(0)
-                .bool()
-            )
-
-            # Expand to batch size:
-            diag_mask = diag_mask.expand(edge_mask.size())
-
-            # Multiply the edge mask by the diagonal mask to not have connections with itself:# noqa
-            edge_mask *= diag_mask
-
-            # Calculate the loss:
-            nll = diffusion_model(
-                x.to(device),
-                h.to(device),
-                node_mask.to(device),
-                edge_mask.to(device),  # noqa
-            )
-            loss = nll.to(device)
-            total_test_loss += nll
-
-    total_test_loss /= len(val_loader)
-    print(f"Total MSE Test Loss is:\t{total_test_loss}\n")
-
-    # Save the model:
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-
-    model_path = folder_name + f"Weights_Test_MSE_{total_test_loss:.3f}/"
-    sample_path = folder_name + "Samples/"
-
-    if not os.path.exists(model_path):
-        os.makedirs(model_path)
-    if not os.path.exists(sample_path):
-        os.makedirs(sample_path)
-
-    # Set the file path for saving the model weights
-    model_path = os.path.join(model_path, "weights.pt")
-
-    # Save model
-    torch.save(diffusion_model.state_dict(), model_path)
+        # wandb.log({"val_loss": total_val_loss})

@@ -90,6 +90,38 @@ def main(args, pytest_time=False):
         if not os.path.exists(sample_path):
             os.makedirs(sample_path)
 
+        # Save a yml file in the folder with all the yml parameters:
+        parameters = {
+            "use_graph_in_model": args.use_graph_in_model,
+            "train_or_test": args.train_or_test,
+            "dataset_to_use": args.dataset_to_use,
+            "timesteps": args.timesteps,
+            "noise_schedule": args.noise_schedule,
+            "remove_hydrogens": args.remove_hydrogens,
+            "random_rotations": args.random_rotations,
+            "augment_train_set": args.augment_train_set,
+            "include_context": args.include_context,
+            "remove_product": args.remove_product,
+            "n_layers": args.n_layers,
+            "hidden_features": args.hidden_features,
+            "use_mse_loss": args.use_mse_loss,
+            "lr": args.lr,
+            "epochs": args.epochs,
+            "batch_size": args.batch_size,
+            "learning_rate_scheduler": args.learning_rate_scheduler,
+            "model_name": args.model_name,
+            "folder_name": args.folder_name,
+            "wandb_project_name": args.wandb_project_name,
+            "test_sampling_number": args.test_sampling_number,
+        }
+
+        extra_params_file_path = os.path.join(
+            folder_name,
+            "parameters_used.yml",
+        )
+        with open(extra_params_file_path, "w") as extra_params_file:
+            yaml.dump(parameters, extra_params_file, default_flow_style=False)
+
         # Check if user wants to use graphs:
         if args.use_graph_in_model:
             # Setup Graph Diffusion model:
@@ -133,6 +165,7 @@ def main(args, pytest_time=False):
                 no_product=args.remove_product,
                 batch_size=args.batch_size,
                 pytest_time=pytest_time,  # ADDED HERE CHECK IT WORKS
+                use_mse=args.use_mse,
             )
 
         # Setup the WandB Logger:
@@ -317,11 +350,20 @@ if __name__ == "__main__":
 
     # EGNN Arguments:
     parser.add_argument(
-        "--n_layers", type=int, default=5
+        "--n_layers",
+        type=int,
+        default=5,
     )  # Number of messagepassing layers
     parser.add_argument(
-        "--hidden_features", type=int, default=64
+        "--hidden_features",
+        type=int,
+        default=64,
     )  # size of the projection of the conditional vector H between each message passing layer  # noqa
+    parser.add_argument(
+        "--use_mse_loss",
+        type=bool,
+        default=True,
+    )
 
     # Training arguments:
     parser.add_argument(

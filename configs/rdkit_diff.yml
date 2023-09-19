@@ -9,12 +9,12 @@ use_graph_in_model: False
 use_mse: False
 
 # Diffusion Variables
-dataset_to_use: RGD1
+dataset_to_use: RDKIT
 timesteps: 1_000
 noise_schedule: sigmoid_2
 remove_hydrogens: False
 random_rotations: False
-augment_train_set: False
+augment_train_set: True
 include_context: 
 remove_product: False
 
@@ -22,14 +22,14 @@ remove_product: False
 
 # Training Variables: 
 lr: 0.0005
-epochs: 500
-batch_size: 256
+epochs: 1_000
+batch_size: 128
 learning_rate_scheduler: False 
-model_name: RGD1_Model_trained_with_RMSD_and_DMAE 
-folder_name: RGD1_Model_trained_with_RMSD_and_DMAE
+model_name: RDKIT_dataset_dmae
+folder_name: RDKIT_dataset_dmae
 
 
-wandb_project_name: RGD1_Model_trained_with_RMSD_and_DMAE
+wandb_project_name: RDKIT_dataset_3000
 
 # Model Variables: 
 n_layers: 8

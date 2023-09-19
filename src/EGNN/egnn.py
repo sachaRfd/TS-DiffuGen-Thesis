@@ -129,6 +129,7 @@ class GCL(nn.Module):
         h, _ = self.node_model(h, edge_index, edge_feat, node_attr)
         if node_mask is not None:
             h = h * node_mask
+
         return h, mij
 
 

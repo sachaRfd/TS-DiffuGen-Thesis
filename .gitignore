@@ -31,8 +31,24 @@ data/Dataset_W93/ONE_stereo_centres
 data/Dataset_RGD1/data/Clean_Geometries/
 data/Dataset_RGD1/data/Multiple_TS/
 data/Dataset_RGD1/data/Single_and_Multiple_TS/
+data/Dataset_generated_samples_classifier/Clean/
+data/Dataset_RDKIT/data/Clean_Geometries/
+data/Dataset_RDKIT/data/Optimised_Geometries
 
+guided_samples
 
+Samples
+
+# Model folders: 
+trained_models/Model_with_DMAE_loss_each_sample_of_bactch_and_mse_3000_epochs
+trained_models/Model_with_DMAE_loss_each_sample_of_bactch_and_mse
+trained_models/RDKIT
+trained_models/RDKIT_dataset
+trained_models/RDKIT_dataset_3000
+trained_models/RDKIT_dataset_dmae
+
+trained_classifier
+RDKIT_dataset_3000
 
 # Ignore Build stuff: 
 build
